@@ -30,6 +30,7 @@
       "name": "boost-regex",
       "features": [ "icu" ]
     },
+    "boost-math",
     "boost-asio",
     "boost-assign",
     "boost-program-options",
