@@ -12,6 +12,7 @@
 	See the COPYING file for more details.
 */
 
+#ifdef HAVE_OPENSSL
 #include "tls_root_store.hpp"
 
 #include "log.hpp"
@@ -105,3 +106,4 @@ void load_tls_root_certs(boost::asio::ssl::context &ctx)
 }
 
 }
+#endif // HAVE_OPENSSL

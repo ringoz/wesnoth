@@ -37,7 +37,9 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/streambuf.hpp>
+#ifdef HAVE_OPENSSL
 #include <boost/asio/ssl.hpp>
+#endif // HAVE_OPENSSL
 
 #include <condition_variable>
 #include <deque>
@@ -97,7 +99,11 @@ public:
 	/** True if connection is currently using TLS and thus is allowed to send cleartext passwords or auth tokens */
 	bool using_tls() const
 	{
+#ifdef HAVE_OPENSSL
 		return utils::holds_alternative<tls_socket>(socket_);
+#else // HAVE_OPENSSL
+		return false;
+#endif // HAVE_OPENSSL
 	}
 
 	void cancel();
@@ -142,13 +148,19 @@ private:
 	typedef boost::asio::ip::tcp::resolver resolver;
 	resolver resolver_;
 
+#ifdef HAVE_OPENSSL
 	boost::asio::ssl::context tls_context_;
+#endif // HAVE_OPENSSL
 
 	std::string host_;
 	std::string service_;
 	typedef std::unique_ptr<boost::asio::ip::tcp::socket> raw_socket;
+#ifdef HAVE_OPENSSL
 	typedef std::unique_ptr<boost::asio::ssl::stream<raw_socket::element_type>> tls_socket;
 	typedef utils::variant<raw_socket, tls_socket> any_socket;
+#else // HAVE_OPENSSL
+	typedef utils::variant<raw_socket> any_socket;
+#endif // HAVE_OPENSSL
 	bool use_tls_;
 	any_socket socket_;
 

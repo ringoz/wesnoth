@@ -62,7 +62,9 @@ wesnothd_connection::wesnothd_connection(const std::string& host, const std::str
 	: worker_thread_()
 	, io_context_()
 	, resolver_(io_context_)
+#ifdef HAVE_OPENSSL
 	, tls_context_(boost::asio::ssl::context::sslv23)
+#endif // HAVE_OPENSSL
 	, host_(host)
 	, service_(service)
 	, use_tls_(true)
@@ -117,6 +119,7 @@ wesnothd_connection::~wesnothd_connection()
 {
 	MPTEST_LOG;
 
+#ifdef HAVE_OPENSSL
 	if(auto socket = utils::get_if<tls_socket>(&socket_)) {
 		error_code ec;
 		// this sends close_notify for secure connection shutdown
@@ -125,6 +128,7 @@ wesnothd_connection::~wesnothd_connection()
 		// this write is needed to trigger immediate close instead of waiting for other side's close_notify
 		boost::asio::write(**socket, boost::asio::buffer(buffer, 0), ec);
 	}
+#endif // HAVE_OPENSSL	
 	// Stop the io_service and wait for the worker thread to terminate.
 	stop();
 	worker_thread_.join();
@@ -194,6 +198,7 @@ void wesnothd_connection::handle_handshake(const error_code& ec)
 			return;
 		}
 
+#ifdef HAVE_OPENSSL
 		if(handshake_response_ == 0x00000000) {
 			network_asio::load_tls_root_certs(tls_context_);
 			raw_socket s { std::move(utils::get<raw_socket>(socket_)) };
@@ -224,6 +229,7 @@ void wesnothd_connection::handle_handshake(const error_code& ec)
 			});
 			return;
 		}
+#endif // HAVE_OPENSSL		
 
 		fallback_to_unencrypted();
 	} else {

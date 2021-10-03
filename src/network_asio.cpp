@@ -94,6 +94,7 @@ connection::connection(const std::string& host, const std::string& service)
 
 connection::~connection()
 {
+#ifdef HAVE_OPENSSL
 	if(auto socket = utils::get_if<tls_socket>(&socket_)) {
 		boost::system::error_code ec;
 		// this sends close_notify for secure connection shutdown
@@ -102,6 +103,7 @@ connection::~connection()
 		// this write is needed to trigger immediate close instead of waiting for other side's close_notify
 		boost::asio::write(**socket, boost::asio::buffer(buffer, 0), ec);
 	}
+#endif // HAVE_OPENSSL
 }
 
 void connection::handle_resolve(const boost::system::error_code& ec, results_type results)
@@ -163,6 +165,7 @@ void connection::handle_handshake(const boost::system::error_code& ec)
 			return;
 		}
 
+#ifdef HAVE_OPENSSL
 		if(handshake_response_ == 0x00000000) {
 			load_tls_root_certs(tls_context_);
 			raw_socket s { std::move(utils::get<raw_socket>(socket_)) };
@@ -191,6 +194,7 @@ void connection::handle_handshake(const boost::system::error_code& ec)
 			});
 			return;
 		}
+#endif // HAVE_OPENSSL
 
 		fallback_to_unencrypted();
 	} else {

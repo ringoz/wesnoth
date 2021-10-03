@@ -14,6 +14,7 @@
 
 #pragma once
 
+#ifdef HAVE_OPENSSL
 #include <boost/asio/ssl/context.hpp>
 
 namespace network_asio
@@ -22,3 +23,4 @@ namespace network_asio
 void load_tls_root_certs(boost::asio::ssl::context &ctx);
 
 }
+#endif // HAVE_OPENSSL

@@ -46,6 +46,11 @@ elseif(APPLE)
 	set(common-external-libs ${common-external-libs} ${IOKIT_LIBRARY} ${SECURITY_LIBRARY})
 endif()
 
+if(OPENSSL_FOUND)
+	add_definitions(-DHAVE_OPENSSL)
+	set(common-external-libs ${common-external-libs} OpenSSL::Crypto OpenSSL::SSL)
+endif()
+
 set(game-external-libs
 	${common-external-libs}
 	${SDL2_LIBRARY}
@@ -207,8 +212,6 @@ if(ENABLE_GAME)
 		wesnoth-client
 		wesnoth-common
 		${game-external-libs}
-		OpenSSL::Crypto
-		OpenSSL::SSL
 	)
 	if(ENABLE_DISPLAY_REVISION)
 		add_dependencies(wesnoth wesnoth-revision)
@@ -237,8 +240,6 @@ if(ENABLE_TESTS)
 		wesnoth-client
 		wesnoth-common
 		${game-external-libs}
-		OpenSSL::Crypto
-		OpenSSL::SSL
 		Boost::iostreams
 		Boost::program_options
 		Boost::regex
@@ -278,8 +279,6 @@ if(ENABLE_SERVER)
 		wesnoth-common
 		${common-external-libs}
 		${MYSQL_LIBS}
-		OpenSSL::Crypto
-		OpenSSL::SSL
 		Boost::iostreams
 		Boost::program_options
 		Boost::regex
@@ -320,8 +319,6 @@ if(ENABLE_CAMPAIGN_SERVER)
 		wesnoth-common
 		${common-external-libs}
 		${MYSQL_LIBS}
-		OpenSSL::Crypto
-		OpenSSL::SSL
 		Boost::iostreams
 		Boost::program_options
 		Boost::regex

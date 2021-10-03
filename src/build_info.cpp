@@ -44,8 +44,10 @@
 #include <boost/version.hpp>
 
 #ifndef __APPLE__
+#ifdef HAVE_OPENSSL
 #include <openssl/crypto.h>
 #include <openssl/opensslv.h>
+#endif // HAVE_OPENSSL
 #endif
 
 #include <pango/pangocairo.h>
@@ -244,9 +246,11 @@ version_table_manager::version_table_manager()
 	//
 
 #ifndef __APPLE__
+#ifdef HAVE_OPENSSL
 	compiled[LIB_CRYPTO] = format_openssl_version(OPENSSL_VERSION_NUMBER);
 	linked[LIB_CRYPTO] = format_openssl_version(SSLeay());
 	names[LIB_CRYPTO] = "OpenSSL/libcrypto";
+#endif // HAVE_OPENSSL
 #endif
 
 	//
