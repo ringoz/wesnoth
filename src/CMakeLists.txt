@@ -141,49 +141,50 @@ endif()
 
 add_library(wesnoth-common STATIC ${wesnoth_core_sources})
 target_link_libraries(wesnoth-common
-	Boost::bimap
-	Boost::filesystem
-	Boost::iostreams
-	Boost::locale
-	Boost::multi_array
+	$<TARGET_NAME_IF_EXISTS:Boost::bimap>
+	$<TARGET_NAME_IF_EXISTS:Boost::filesystem>
+	$<TARGET_NAME_IF_EXISTS:Boost::iostreams>
+	$<TARGET_NAME_IF_EXISTS:Boost::locale>
+	$<TARGET_NAME_IF_EXISTS:Boost::multi_array>
+	$<TARGET_NAME_IF_EXISTS:Boost::random>
 )
 
 if(ENABLE_GAME OR ENABLE_TESTS)
 	add_library(wesnoth-client STATIC ${wesnoth_sources} ${lua_sources} ${wesnoth_game_sources} ${wesnoth_sdl_sources})
 	target_link_libraries(wesnoth-client
-		Boost::algorithm
-		Boost::align
-		Boost::any
-		Boost::asio
-		Boost::bimap
-		Boost::circular_buffer
-		Boost::dynamic_bitset
-		Boost::filesystem
-		Boost::format
-		Boost::iostreams
-		Boost::locale
-		Boost::logic
-		Boost::math
-		Boost::multi_array
-		Boost::program_options
-		Boost::ptr_container
-		Boost::range
+		$<TARGET_NAME_IF_EXISTS:Boost::algorithm>
+		$<TARGET_NAME_IF_EXISTS:Boost::align>
+		$<TARGET_NAME_IF_EXISTS:Boost::any>
+		$<TARGET_NAME_IF_EXISTS:Boost::asio>
+		$<TARGET_NAME_IF_EXISTS:Boost::bimap>
+		$<TARGET_NAME_IF_EXISTS:Boost::circular_buffer>
+		$<TARGET_NAME_IF_EXISTS:Boost::dynamic_bitset>
+		$<TARGET_NAME_IF_EXISTS:Boost::filesystem>
+		$<TARGET_NAME_IF_EXISTS:Boost::format>
+		$<TARGET_NAME_IF_EXISTS:Boost::iostreams>
+		$<TARGET_NAME_IF_EXISTS:Boost::locale>
+		$<TARGET_NAME_IF_EXISTS:Boost::logic>
+		$<TARGET_NAME_IF_EXISTS:Boost::math>
+		$<TARGET_NAME_IF_EXISTS:Boost::multi_array>
+		$<TARGET_NAME_IF_EXISTS:Boost::program_options>
+		$<TARGET_NAME_IF_EXISTS:Boost::ptr_container>
+		$<TARGET_NAME_IF_EXISTS:Boost::range>
 	)
 
 	# widgets need special handling since otherwise the way they're registered causes the linker to remove them since it incorrectly thinks they're unused
 	add_library(wesnoth-widgets STATIC ${wesnoth_widget-sources})
 	target_link_libraries(wesnoth-widgets
-		Boost::align
-		Boost::any
-		Boost::asio
-		Boost::bimap
-		Boost::circular_buffer
-		Boost::dynamic_bitset
-		Boost::locale
-		Boost::logic
-		Boost::multi_array
-		Boost::preprocessor
-		Boost::range
+		$<TARGET_NAME_IF_EXISTS:Boost::align>
+		$<TARGET_NAME_IF_EXISTS:Boost::any>
+		$<TARGET_NAME_IF_EXISTS:Boost::asio>
+		$<TARGET_NAME_IF_EXISTS:Boost::bimap>
+		$<TARGET_NAME_IF_EXISTS:Boost::circular_buffer>
+		$<TARGET_NAME_IF_EXISTS:Boost::dynamic_bitset>
+		$<TARGET_NAME_IF_EXISTS:Boost::locale>
+		$<TARGET_NAME_IF_EXISTS:Boost::logic>
+		$<TARGET_NAME_IF_EXISTS:Boost::multi_array>
+		$<TARGET_NAME_IF_EXISTS:Boost::preprocessor>
+		$<TARGET_NAME_IF_EXISTS:Boost::range>
 	)
 
 	if(APPLE)
@@ -279,15 +280,9 @@ if(ENABLE_SERVER)
 		wesnoth-common
 		${common-external-libs}
 		${MYSQL_LIBS}
-		Boost::iostreams
-		Boost::program_options
-		Boost::regex
-		Boost::system
-		Boost::thread
-		Boost::random
-		Boost::coroutine
-		Boost::locale
-		Boost::filesystem
+		$<TARGET_NAME_IF_EXISTS:Boost::asio>
+		$<TARGET_NAME_IF_EXISTS:Boost::scope_exit>
+		$<TARGET_NAME_IF_EXISTS:Boost::coroutine>
 	)
 	if(WIN32)
 		target_link_options(wesnothd PRIVATE /WX)
