@@ -27,7 +27,7 @@ if(ZLIB_INCLUDE_DIR)
 endif()
 
 # needed to get include paths in the subfolders correct
-include_directories( ${CMAKE_SOURCE_DIR}/src/ )
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
 # needed to have the generated config.h used, too
 include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
@@ -135,11 +135,52 @@ endif()
 ########### Wesnoth ###############
 
 add_library(wesnoth-common STATIC ${wesnoth_core_sources})
+target_link_libraries(wesnoth-common
+	Boost::bimap
+	Boost::filesystem
+	Boost::iostreams
+	Boost::locale
+	Boost::multi_array
+)
+
 if(ENABLE_GAME OR ENABLE_TESTS)
 	add_library(wesnoth-client STATIC ${wesnoth_sources} ${lua_sources} ${wesnoth_game_sources} ${wesnoth_sdl_sources})
+	target_link_libraries(wesnoth-client
+		Boost::algorithm
+		Boost::align
+		Boost::any
+		Boost::asio
+		Boost::bimap
+		Boost::circular_buffer
+		Boost::dynamic_bitset
+		Boost::filesystem
+		Boost::format
+		Boost::iostreams
+		Boost::locale
+		Boost::logic
+		Boost::math
+		Boost::multi_array
+		Boost::program_options
+		Boost::ptr_container
+		Boost::range
+	)
 
 	# widgets need special handling since otherwise the way they're registered causes the linker to remove them since it incorrectly thinks they're unused
 	add_library(wesnoth-widgets STATIC ${wesnoth_widget-sources})
+	target_link_libraries(wesnoth-widgets
+		Boost::align
+		Boost::any
+		Boost::asio
+		Boost::bimap
+		Boost::circular_buffer
+		Boost::dynamic_bitset
+		Boost::locale
+		Boost::logic
+		Boost::multi_array
+		Boost::preprocessor
+		Boost::range
+	)
+
 	if(APPLE)
 		set(WIDGETS_LIB -Wl,-force_load wesnoth-widgets)
 	elseif(NOT WIN32)
@@ -153,7 +194,7 @@ endif()
 if(ENABLE_GAME)
 	if(WIN32)
 		add_executable(wesnoth WIN32 wesnoth.cpp ../packaging/windows/wesnoth.rc)
-		target_link_options(wesnoth PRIVATE /WX /WHOLEARCHIVE:wesnoth-widgets)
+		target_link_options(wesnoth PRIVATE /WX /WHOLEARCHIVE:$<TARGET_LINKER_FILE:wesnoth-widgets>)
 	elseif(APPLE)
 		add_executable(wesnoth wesnoth.cpp macosx/SDLMain.mm)
 	else()
@@ -168,15 +209,6 @@ if(ENABLE_GAME)
 		${game-external-libs}
 		OpenSSL::Crypto
 		OpenSSL::SSL
-		Boost::iostreams
-		Boost::program_options
-		Boost::regex
-		Boost::system
-		Boost::thread
-		Boost::random
-		Boost::coroutine
-		Boost::locale
-		Boost::filesystem
 	)
 	if(ENABLE_DISPLAY_REVISION)
 		add_dependencies(wesnoth wesnoth-revision)
