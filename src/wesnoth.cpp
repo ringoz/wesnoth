@@ -83,7 +83,9 @@
 #pragma warning(disable : 4458)
 #endif
 
+#ifdef HAVE_ZLIB
 #include <boost/iostreams/filter/gzip.hpp> // for gzip_compressor, etc
+#endif
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -202,12 +204,20 @@ static void decode(const std::string& input_file, const std::string& output_file
 
 static void gzip_encode(const std::string& input_file, const std::string& output_file)
 {
+#ifdef HAVE_ZLIB
 	encode<boost::iostreams::gzip_compressor>(input_file, output_file);
+#else
+	throw config::error("gzip not supported");
+#endif
 }
 
 static void gzip_decode(const std::string& input_file, const std::string& output_file)
 {
+#ifdef HAVE_ZLIB
 	decode<boost::iostreams::gzip_decompressor>(input_file, output_file);
+#else
+	throw config::error("gzip not supported");
+#endif
 }
 
 static void bzip2_encode(const std::string& input_file, const std::string& output_file)

@@ -28,7 +28,9 @@
 #include "team.hpp"
 
 #include <boost/algorithm/string/replace.hpp>
+#ifdef HAVE_ZLIB
 #include <boost/iostreams/filter/gzip.hpp>
+#endif
 
 static lg::log_domain log_engine("engine");
 #define LOG_SAVE LOG_STREAM(info, log_engine)
@@ -178,12 +180,16 @@ config& save_index_class::data()
 	if(loaded_ == false && filesystem::file_exists(si_file)) {
 		try {
 			filesystem::scoped_istream stream = filesystem::istream_file(si_file);
+#ifdef HAVE_ZLIB
 			try {
 				read_gz(data_, *stream);
 			} catch(const boost::iostreams::gzip_error&) {
 				stream->seekg(0);
 				read(data_, *stream);
 			}
+#else
+			throw config::error("gzip not supported");
+#endif
 		} catch(const filesystem::io_exception& e) {
 			ERR_SAVE << "error reading save index: '" << e.what() << "'" << std::endl;
 		} catch(const config::error& e) {

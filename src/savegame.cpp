@@ -13,7 +13,9 @@
 	See the COPYING file for more details.
 */
 
+#ifdef HAVE_ZLIB
 #include <boost/iostreams/filter/gzip.hpp>
+#endif
 
 #include "savegame.hpp"
 

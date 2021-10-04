@@ -46,6 +46,10 @@ elseif(APPLE)
 	set(common-external-libs ${common-external-libs} ${IOKIT_LIBRARY} ${SECURITY_LIBRARY})
 endif()
 
+if(ZLIB_FOUND)
+	add_definitions(-DHAVE_ZLIB)
+endif()
+
 if(BZIP2_FOUND)
 	add_definitions(-DHAVE_BZIP2)
 endif()

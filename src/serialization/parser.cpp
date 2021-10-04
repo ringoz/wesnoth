@@ -43,7 +43,9 @@
 #pragma warning(disable : 4458)
 #endif
 
+#ifdef HAVE_ZLIB
 #include <boost/iostreams/filter/gzip.hpp>
+#endif
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -684,7 +686,11 @@ void read_compressed(config& cfg, std::istream& file, abstract_validator* valida
 /** Might throw a std::ios_base::failure especially a gzip_error. */
 void read_gz(config& cfg, std::istream& file, abstract_validator* validator)
 {
+#ifdef HAVE_ZLIB
 	read_compressed<boost::iostreams::gzip_decompressor>(cfg, file, validator);
+#else
+	throw config::error("gzip not supported");
+#endif
 }
 
 /** Might throw a std::ios_base::failure especially bzip2_error. */
@@ -788,7 +794,11 @@ void write_compressed(std::ostream& out, const configr_of& cfg)
 
 void write_gz(std::ostream& out, const configr_of& cfg)
 {
+#ifdef HAVE_ZLIB
 	write_compressed<boost::iostreams::gzip_compressor>(out, cfg);
+#else
+	throw config::error("gzip not supported");
+#endif
 }
 
 void write_bz2(std::ostream& out, const configr_of& cfg)

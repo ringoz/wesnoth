@@ -29,7 +29,9 @@
 #ifdef HAVE_BZIP2
 #include <boost/iostreams/filter/bzip2.hpp>
 #endif
+#ifdef HAVE_ZLIB
 #include <boost/iostreams/filter/gzip.hpp>
+#endif
 
 static lg::log_domain log_config("config");
 #define ERR_CF LOG_STREAM(err, log_config)
@@ -43,8 +45,12 @@ config_writer::config_writer(std::ostream& out, compression::format compress)
 	, textdomain_(PACKAGE)
 {
 	if(compress_ == compression::GZIP) {
+#ifdef HAVE_ZLIB
 		filter_.push(boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(9)));
 		filter_.push(out);
+#else
+		throw config::error("gzip not supported");		
+#endif
 	} else if(compress_ == compression::BZIP2) {
 #ifdef HAVE_BZIP2
 		filter_.push(boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params()));
@@ -64,11 +70,13 @@ config_writer::config_writer(std::ostream& out, bool compress, int level)
 	, textdomain_(PACKAGE)
 {
 	if(compress_) {
+#ifdef HAVE_ZLIB
 		if(level >= 0) {
 			filter_.push(boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(level)));
 		} else {
 			filter_.push(boost::iostreams::gzip_compressor(boost::iostreams::gzip_params()));
 		}
+#endif
 
 		filter_.push(out);
 	}

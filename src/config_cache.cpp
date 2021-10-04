@@ -27,7 +27,9 @@
 #include "game_version.hpp"
 
 #include <boost/algorithm/string/replace.hpp>
+#ifdef HAVE_ZLIB
 #include <boost/iostreams/filter/gzip.hpp>
+#endif
 
 static lg::log_domain log_cache("cache");
 #define ERR_CACHE LOG_STREAM(err, log_cache)
@@ -224,9 +226,11 @@ void config_cache::read_cache(const std::string& file_path, config& cfg, abstrac
 				ERR_CACHE << "cache " << fname << extension << " is corrupt. Loading from files: "<< e.message << std::endl;
 			} catch(const filesystem::io_exception&) {
 				ERR_CACHE << "error reading cache " << fname << extension << ". Loading from files" << std::endl;
+#ifdef HAVE_ZLIB
 			} catch (const boost::iostreams::gzip_error& e) {
 				//read_file -> ... -> read_gz can throw this exception.
 				ERR_CACHE << "cache " << fname << extension << " is corrupt. Error code: " << e.error() << std::endl;
+#endif
 			}
 		}
 

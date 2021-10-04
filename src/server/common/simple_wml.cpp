@@ -22,7 +22,9 @@
 #include <boost/iostreams/filter/bzip2.hpp>
 #endif
 #include <boost/iostreams/filter/counter.hpp>
+#ifdef HAVE_ZLIB
 #include <boost/iostreams/filter/gzip.hpp>
+#endif
 
 #include "server/common/simple_wml.hpp"
 
@@ -57,7 +59,11 @@ char* uncompress_buffer(const string_span& input, string_span* span)
 			throw error("bzip2 not supported");
 #endif
 		} else {
+#ifdef HAVE_ZLIB
 			filter.push(boost::iostreams::gzip_decompressor());
+#else
+			throw error("gzip not supported");
+#endif
 		}
 		filter.push(stream);
 		state = 3;
@@ -124,7 +130,11 @@ char* compress_buffer(const char* input, string_span* span, bool bzip2)
 			throw error("bzip2 not supported");
 #endif
 		} else {
+#ifdef HAVE_ZLIB
 			filter.push(boost::iostreams::gzip_compressor());
+#else
+			throw error("gzip not supported");
+#endif
 		}
 		state = 4;
 		nalloc = in.size()*2 + 80;
