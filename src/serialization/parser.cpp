@@ -32,7 +32,9 @@
 #include "wesconfig.h"
 
 #include <boost/algorithm/string/replace.hpp>
+#ifdef HAVE_BZIP2
 #include <boost/iostreams/filter/bzip2.hpp>
+#endif
 #include <boost/iostreams/filtering_stream.hpp>
 
 #if defined(_MSC_VER)
@@ -688,7 +690,11 @@ void read_gz(config& cfg, std::istream& file, abstract_validator* validator)
 /** Might throw a std::ios_base::failure especially bzip2_error. */
 void read_bz2(config& cfg, std::istream& file, abstract_validator* validator)
 {
+#ifdef HAVE_BZIP2
 	read_compressed<boost::iostreams::bzip2_decompressor>(cfg, file, validator);
+#else
+	throw config::error("bzip2 not supported");
+#endif
 }
 
 void write_key_val(std::ostream& out,
@@ -787,5 +793,9 @@ void write_gz(std::ostream& out, const configr_of& cfg)
 
 void write_bz2(std::ostream& out, const configr_of& cfg)
 {
+#ifdef HAVE_BZIP2
 	write_compressed<boost::iostreams::bzip2_compressor>(out, cfg);
+#else
+	throw config::error("bzip2 not supported");
+#endif
 }

@@ -26,7 +26,9 @@
 #include "serialization/parser.hpp"
 #include "wesconfig.h"
 
+#ifdef HAVE_BZIP2
 #include <boost/iostreams/filter/bzip2.hpp>
+#endif
 #include <boost/iostreams/filter/gzip.hpp>
 
 static lg::log_domain log_config("config");
@@ -44,8 +46,12 @@ config_writer::config_writer(std::ostream& out, compression::format compress)
 		filter_.push(boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(9)));
 		filter_.push(out);
 	} else if(compress_ == compression::BZIP2) {
+#ifdef HAVE_BZIP2
 		filter_.push(boost::iostreams::bzip2_compressor(boost::iostreams::bzip2_params()));
 		filter_.push(out);
+#else
+		throw config::error("bzip2 not supported");		
+#endif
 	}
 }
 

@@ -18,7 +18,9 @@
 
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#ifdef HAVE_BZIP2
 #include <boost/iostreams/filter/bzip2.hpp>
+#endif
 #include <boost/iostreams/filter/counter.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
@@ -49,7 +51,11 @@ char* uncompress_buffer(const string_span& input, string_span* span)
 		boost::iostreams::filtering_stream<boost::iostreams::input> filter;
 		state = 2;
 		if (!span->empty() && *span->begin() == 'B') {
+#ifdef HAVE_BZIP2
 			filter.push(boost::iostreams::bzip2_decompressor());
+#else
+			throw error("bzip2 not supported");
+#endif
 		} else {
 			filter.push(boost::iostreams::gzip_decompressor());
 		}
@@ -112,7 +118,11 @@ char* compress_buffer(const char* input, string_span* span, bool bzip2)
 		boost::iostreams::filtering_stream<boost::iostreams::output> filter;
 		state = 3;
 		if (bzip2) {
+#ifdef HAVE_BZIP2
 			filter.push(boost::iostreams::bzip2_compressor());
+#else
+			throw error("bzip2 not supported");
+#endif
 		} else {
 			filter.push(boost::iostreams::gzip_compressor());
 		}

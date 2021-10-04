@@ -73,7 +73,9 @@
 
 #include <boost/iostreams/categories.hpp>   // for input, output
 #include <boost/iostreams/copy.hpp>         // for copy
+#ifdef HAVE_BZIP2
 #include <boost/iostreams/filter/bzip2.hpp> // for bzip2_compressor, etc
+#endif
 
 #if defined(_MSC_VER)
 #pragma warning(push)
@@ -210,12 +212,20 @@ static void gzip_decode(const std::string& input_file, const std::string& output
 
 static void bzip2_encode(const std::string& input_file, const std::string& output_file)
 {
+#ifdef HAVE_BZIP2
 	encode<boost::iostreams::bzip2_compressor>(input_file, output_file);
+#else
+	throw config::error("bzip2 not supported");
+#endif
 }
 
 static void bzip2_decode(const std::string& input_file, const std::string& output_file)
 {
+#ifdef HAVE_BZIP2
 	decode<boost::iostreams::bzip2_decompressor>(input_file, output_file);
+#else
+	throw config::error("bzip2 not supported");
+#endif
 }
 
 static void handle_preprocess_command(const commandline_options& cmdline_opts)

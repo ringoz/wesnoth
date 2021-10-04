@@ -46,6 +46,10 @@ elseif(APPLE)
 	set(common-external-libs ${common-external-libs} ${IOKIT_LIBRARY} ${SECURITY_LIBRARY})
 endif()
 
+if(BZIP2_FOUND)
+	add_definitions(-DHAVE_BZIP2)
+endif()
+
 if(OPENSSL_FOUND)
 	add_definitions(-DHAVE_OPENSSL)
 	set(common-external-libs ${common-external-libs} OpenSSL::Crypto OpenSSL::SSL)
