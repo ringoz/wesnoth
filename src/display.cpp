@@ -61,10 +61,6 @@
 #include <iomanip>
 #include <utility>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 // Includes for bug #17573
 
 static lg::log_domain log_display("display");
@@ -277,19 +273,10 @@ display::display(const display_context* dc,
 	if(!menu_buttons_.empty() || !action_buttons_.empty()) {
 		create_buttons();
 	}
-
-#ifdef _WIN32
-	// Increase timer resolution to prevent delays getting much longer than they should.
-	timeBeginPeriod(1u);
-#endif
 }
 
 display::~display()
 {
-#ifdef _WIN32
-	timeEndPeriod(1u);
-#endif
-
 	singleton_ = nullptr;
 	resources::fake_units = nullptr;
 }
