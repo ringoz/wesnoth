@@ -27,7 +27,7 @@ static lg::log_domain log_filesystem("filesystem");
 namespace filesystem {
 
 rwops_ptr make_read_RWops(const std::string &path) {
-	rwops_ptr rw(SDL_RWFromFile(path.c_str(), "r"), &SDL_FreeRW);
+	rwops_ptr rw(SDL_RWFromFile(path.c_str(), "r"), &SDL_RWclose);
 	if(!rw) {
 		ERR_FS << "make_read_RWops: istream_file returned NULL on " << path << '\n';
 	}
@@ -35,7 +35,7 @@ rwops_ptr make_read_RWops(const std::string &path) {
 }
 
 rwops_ptr make_write_RWops(const std::string &path) {
-	rwops_ptr rw(SDL_RWFromFile(path.c_str(), "w"), &SDL_FreeRW);
+	rwops_ptr rw(SDL_RWFromFile(path.c_str(), "w"), &SDL_RWclose);
 	if(!rw) {
 		ERR_FS << "make_write_RWops: ostream_file returned NULL on " << path << '\n';
 	}
