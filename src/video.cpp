@@ -388,19 +388,6 @@ std::pair<float, float> CVideo::get_dpi() const
 {
 	float hdpi, vdpi;
 	if(window && SDL_GetDisplayDPI(window->get_display_index(), nullptr, &hdpi, &vdpi) == 0) {
-#ifdef TARGET_OS_OSX
-		// SDL 2.0.12 changes SDL_GetDisplayDPI. Function now returns DPI
-		// multiplied by screen's scale factor. This part of code reverts
-		// this multiplication.
-		//
-		// For more info see issue: https://github.com/wesnoth/wesnoth/issues/5019
-
-		if(sdl_get_version() >= version_info{2, 0, 12}) {
-			float scale_factor = desktop::apple::get_scale_factor(window->get_display_index());
-			hdpi /= scale_factor;
-			vdpi /= scale_factor;
-		}
-#endif
 		return { hdpi, vdpi };
 	}
 	// SDL doesn't know the screen dpi, there's a configuration issue, or we
