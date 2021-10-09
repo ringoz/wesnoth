@@ -19,7 +19,6 @@
 #include "filesystem.hpp"
 #include "log.hpp"
 #include "serialization/string_utils.hpp"
-#include "vorbis/vorbisfile.h"
 
 static lg::log_domain log_audio("audio");
 #define ERR_AUDIO LOG_STREAM(err, log_audio)
@@ -79,33 +78,6 @@ void music_track::resolve()
 	if (file_path_.empty()) {
 		LOG_AUDIO << "could not find track '" << id_ << "' for track identification\n";
 		return;
-	}
-
-	if (title_.empty()) {
-		OggVorbis_File vf;
-		if(ov_fopen(file_path_.c_str(), &vf) < 0) {
-			LOG_AUDIO << "Error opening file '" << file_path_ << "' for track identification\n";
-			return;
-		}
-
-		vorbis_comment* comments = ov_comment(&vf, -1);
-		char** user_comments = comments->user_comments;
-
-		bool found = false;
-		for (int i=0; i< comments->comments; i++) {
-			const std::string comment_string(user_comments[i]);
-			const std::vector<std::string> comment_list = utils::split(comment_string, '=');
-
-			if (comment_list[0] == "TITLE" || comment_list[0] == "title") {
-				title_ = comment_list[1];
-				found = true;
-			}
-		}
-		if (!found) {
-			LOG_AUDIO << "No title for music track '" << id_ << "'\n";
-		}
-
-	ov_clear(&vf);
 	}
 
 	LOG_AUDIO << "resolved music track '" << id_ << "' into '" << file_path_ << "'\n";
