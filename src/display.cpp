@@ -1296,6 +1296,7 @@ void display::drawing_buffer_commit()
 
 	for (const blit_helper &blit : drawing_buffer_) {
 		for (const surface& surf : blit.surf()) {
+			if (!surf) continue;
 			// Note that dstrect can be changed by sdl_blit
 			// and so a new instance should be initialized
 			// to pass to each call to sdl_blit.
