@@ -18,16 +18,6 @@
 #ifdef _MSC_VER
 #endif //_MSC_VER
 
-#ifdef NDEBUG
-/*
- * Wesnoth uses asserts to avoid undefined behaviour. For example, to make sure
- * pointers are not nullptr before dereferencing them, or collections are not empty
- * before accessing their elements. Therefore Wesnoth should not be compiled
- * with assertions disabled.
- */
-#error "Compilation with NDEBUG defined isn't supported, Wesnoth depends on asserts."
-#endif
-
 #define UNUSED(x)  ((void)(x))     /* to avoid warnings */
 
 // To allow using some optional C++20 features (TODO: use the actual C++20 value once that's finalized)
