@@ -16,7 +16,7 @@
 #pragma once
 
 #include "font/text.hpp"
-#include <pango/pango.h>
+#include <SDL2/SDL_ttf.h>
 
 namespace font {
 
@@ -25,33 +25,26 @@ class p_font
 {
 public:
 	p_font(const std::string& name, const unsigned size, font::pango_text::FONT_STYLE style)
-		: font_(pango_font_description_new())
 	{
-		pango_font_description_set_family(font_, name.c_str());
-		pango_font_description_set_size(font_, size * PANGO_SCALE);
+		static auto init = TTF_Init();
+		static std::unordered_map<unsigned, TTF_Font *> cache;
 
-		if(style != pango_text::STYLE_NORMAL) {
-			if(style & pango_text::STYLE_ITALIC) {
-				pango_font_description_set_style(font_, PANGO_STYLE_ITALIC);
-			}
-			if(style & pango_text::STYLE_BOLD) {
-				pango_font_description_set_weight(font_, PANGO_WEIGHT_BOLD);
-			}
-			if(style & pango_text::STYLE_UNDERLINE) {
-				/* Do nothing here, underline is a property of the layout. */
-			}
-		}
+		auto &font = cache[size];
+		if (!font)
+			font = TTF_OpenFont("fonts/Lato-Medium.ttf", size);
+
+		font_ = font;
 	}
 
 	p_font(const p_font &) = delete;
 	p_font & operator = (const p_font &) = delete;
 
-	~p_font() { pango_font_description_free(font_); }
+	~p_font() {}
 
-	PangoFontDescription* get() { return font_; }
+	TTF_Font* get() { return font_; }
 
 private:
-	PangoFontDescription *font_;
+	TTF_Font *font_;
 };
 
 } // namespace font

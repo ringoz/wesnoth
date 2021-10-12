@@ -12,13 +12,9 @@
       "name": "sdl2-mixer",
       "features": [ "libvorbis", "dynamic-load" ]
     },
+    "sdl2-ttf",
     "bzip2",
     "zlib",
-    "pango",
-    "cairo",
-    "fontconfig",
-    "libvorbis",
-    "libogg",
     "boost-filesystem",
     "boost-iostreams",
     {

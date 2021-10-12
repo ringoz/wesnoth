@@ -13,14 +13,12 @@ if(ENABLE_MYSQL)
 endif()
 
 ## some includes ##
-include_directories(SYSTEM ${FONTCONFIG_INCLUDE_DIRS})
-include_directories(SYSTEM ${PANGOCAIRO_INCLUDE_DIRS})
 include_directories(SYSTEM ${GETTEXT_INCLUDE_DIR})
 include_directories(SYSTEM ${LIBDBUS_INCLUDE_DIRS})
-include_directories(SYSTEM ${VORBISFILE_INCLUDE_DIR})
 include_directories(SYSTEM ${SDL2_INCLUDE_DIR})
 include_directories(SYSTEM ${SDL2IMAGE_INCLUDE_DIR})
 include_directories(SYSTEM ${SDL2MIXER_INCLUDE_DIR})
+include_directories(SYSTEM ${SDL2TTF_INCLUDE_DIR})
 
 if(ZLIB_INCLUDE_DIR)
 	include_directories(SYSTEM ${ZLIB_INCLUDE_DIR} )
@@ -32,8 +30,6 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
 include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
 link_directories(
-	${PANGOCAIRO_LIBRARY_DIRS}
-	${FONTCONFIG_LIBRARY_DIRS}
 	${LIBDBUS_LIBRARY_DIRS}
 )
 
@@ -64,10 +60,8 @@ set(game-external-libs
 	${SDL2_LIBRARY}
 	${SDL2_IMAGE_LIBRARY}
 	${SDL2_MIXER_LIBRARY}
-	${PANGOCAIRO_LIBRARIES}
-	${FONTCONFIG_LIBRARIES}
+	${SDL2_TTF_LIBRARY}
 	${LIBDBUS_LIBRARIES}
-	${VORBISFILE_LIBRARIES}
 )
 
 if(HISTORY_FOUND)

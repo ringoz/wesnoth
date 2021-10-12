@@ -50,8 +50,6 @@
 #endif // HAVE_OPENSSL
 #endif
 
-#include <pango/pangocairo.h>
-
 #ifdef __APPLE__
 // apple_notification.mm uses Foundation.h, which is an Objective-C header;
 // but CoreFoundation.h is a C header which also defines these.
@@ -252,22 +250,6 @@ version_table_manager::version_table_manager()
 	names[LIB_CRYPTO] = "OpenSSL/libcrypto";
 #endif // HAVE_OPENSSL
 #endif
-
-	//
-	// Cairo
-	//
-
-	compiled[LIB_CAIRO] = CAIRO_VERSION_STRING;
-	linked[LIB_CAIRO] = cairo_version_string();
-	names[LIB_CAIRO] = "Cairo";
-
-	//
-	// Pango
-	//
-
-	compiled[LIB_PANGO] = PANGO_VERSION_STRING;
-	linked[LIB_PANGO] = pango_version_string();
-	names[LIB_PANGO] = "Pango";
 
 	//
 	// Features table.

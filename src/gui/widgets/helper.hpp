@@ -18,8 +18,6 @@
 #include "color.hpp"
 #include "font/text.hpp"
 
-#include <pango/pango-layout.h>
-
 #include <cstdint>
 #include <string>
 

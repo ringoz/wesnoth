@@ -20,8 +20,44 @@
 #include "sdl/surface.hpp"
 #include "serialization/string_utils.hpp"
 
-#include <pango/pango.h>
-#include <pango/pangocairo.h>
+typedef enum {
+  PANGO_ALIGN_LEFT,
+  PANGO_ALIGN_CENTER,
+  PANGO_ALIGN_RIGHT
+} PangoAlignment;
+
+typedef enum {
+  PANGO_WRAP_WORD,
+  PANGO_WRAP_CHAR,
+  PANGO_WRAP_WORD_CHAR
+} PangoWrapMode;
+
+typedef enum {
+  PANGO_ELLIPSIZE_NONE,
+  PANGO_ELLIPSIZE_START,
+  PANGO_ELLIPSIZE_MIDDLE,
+  PANGO_ELLIPSIZE_END
+} PangoEllipsizeMode;
+
+typedef struct
+{
+	int x, y, width, height;
+} PangoRectangle;
+
+struct PangoLayout
+{
+  struct word
+  {
+    std::string text;
+	SDL_Rect bounds;
+  };
+
+  int spacing;
+  std::vector<std::vector<word>> lines;
+  std::vector<std::string> blocks;
+
+  void set_text(const std::string_view &s);
+};
 
 #include <functional>
 #include <memory>
@@ -266,8 +302,7 @@ public:
 private:
 
 	/***** ***** ***** *****  Pango variables ***** ***** ***** *****/
-	std::unique_ptr<PangoContext, std::function<void(void*)>> context_;
-	std::unique_ptr<PangoLayout, std::function<void(void*)>> layout_;
+	mutable PangoLayout layout_;
 	mutable PangoRectangle rect_;
 
 	/** The SDL surface to render upon used as a cache. */
@@ -386,15 +421,6 @@ private:
 	void rerender(const SDL_Rect& viewport);
 
 	void render(PangoLayout& layout, const SDL_Rect& viewport, const unsigned stride);
-
-	/**
-	 * Buffer to store the image on.
-	 *
-	 * We use a cairo surface to draw on this buffer and then use the buffer as
-	 * data source for the SDL_Surface. This means the buffer needs to be stored
-	 * in the object, since SDL_Surface doesn't own its buffer.
-	 */
-	mutable std::vector<uint8_t> surface_buffer_;
 
 	/**
 	 * Sets the markup'ed text.

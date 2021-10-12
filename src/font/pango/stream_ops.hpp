@@ -15,7 +15,6 @@
 
 #pragma once
 
-#include <pango/pango.h>
 #include <ostream>
 
 inline std::ostream& operator<<(std::ostream& s, const PangoRectangle &rect)
