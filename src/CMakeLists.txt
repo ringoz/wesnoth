@@ -169,6 +169,7 @@ if(ENABLE_GAME OR ENABLE_TESTS)
 		$<TARGET_NAME_IF_EXISTS:Boost::math>
 		$<TARGET_NAME_IF_EXISTS:Boost::multi_array>
 		$<TARGET_NAME_IF_EXISTS:Boost::program_options>
+		$<TARGET_NAME_IF_EXISTS:Boost::property_tree>
 		$<TARGET_NAME_IF_EXISTS:Boost::ptr_container>
 		$<TARGET_NAME_IF_EXISTS:Boost::range>
 	)

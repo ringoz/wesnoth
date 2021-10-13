@@ -40,20 +40,102 @@
 #include <cstring>
 #include <stdexcept>
 
-void PangoLayout::set_text(const std::string_view &s)
+static void add_span(std::vector<PangoLayout::span> &spans, PangoLayout::span span)
+{
+	boost::algorithm::trim_if(span.text, isblank);
+	if (!span.text.empty())
+	{
+		std::vector<std::string> blocks;
+		boost::split(blocks, std::move(span.text), boost::is_any_of("\n\r"));
+
+		spans.reserve(spans.size() + blocks.size());
+		for (auto &block : blocks)
+		{
+			spans.push_back(span);
+			spans.back().text = std::move(block);
+			spans.back().linebreak = (&block != &blocks.back());
+		}
+	}
+}
+
+void PangoLayout::set_text(std::string s)
 {
 	lines.clear();
 	spans.clear();
+	add_span(spans, {s});
+}
 
-	std::vector<std::string> blocks;
-	boost::split(blocks, s, boost::is_any_of("\n\r"));
-	for (auto &block : blocks)
-		spans.push_back({std::move(block)});
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+namespace pt = boost::property_tree;
+
+static void walk_ptree(pt::ptree &node, PangoLayout::span &span, const std::function<void(pt::ptree::value_type &entry, PangoLayout::span &span)> &callback)
+{
+	for (auto &entry : node)
+	{
+		PangoLayout::span newspan;
+		if (entry.first == "span")
+		{
+			newspan = span;
+			span = newspan;
+		}
+		else
+			callback(entry, span);
+
+		walk_ptree(entry.second, span, callback);
+	}
 }
 
 void PangoLayout::set_markup(const std::string &s)
 {
-	set_text(s);
+	lines.clear();
+	spans.clear();
+
+	pt::ptree tree;
+	std::istringstream stream("<xml>" + s + "</xml>");
+	pt::read_xml(stream, tree, pt::xml_parser::no_concat_text);
+
+	PangoLayout::span span;
+	walk_ptree(tree, span, [&](auto &entry, PangoLayout::span &span)
+	{
+		if (entry.first == "color")
+		{
+			std::string col = std::move(entry.second.data());
+			if (col[0] == '#')
+				col.erase(0, 1);
+
+			if (col.size() == 3)
+			{
+				col.resize(6);
+				col[5] = col[4] = col[2];
+				col[3] = col[2] = col[1];
+				col[1] = col[0];
+			}
+
+			assert(col.size() == 6);
+			span.color = color_t::from_hex_string(col);
+		}
+		else
+		if (entry.first == "<xmltext>")
+		{
+			span.text = std::move(entry.second.data());
+			add_span(spans, span);
+		}
+	});
+}
+
+static bool pango_parse_markup(const std::string_view &s)
+{
+	try 
+	{
+		PangoLayout layout;
+		layout.set_markup(std::string(s));
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
 }
 
 namespace font {
@@ -418,11 +500,11 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 	}
 
 	layout.lines.clear();
+	layout.lines.push_back({});
 	for(auto& span : layout.spans) {
 		std::vector<std::string> words;
 		boost::split(words, span.text, boost::is_any_of(" "));
 
-		layout_.lines.push_back({});
 		for(auto& word : words) {
 			TTF_SizeUTF8(font.get(), word.c_str(), &size.width, &size.height);
 			if(maximum_width != -1 && size.x + size.width > maximum_width) {
@@ -436,8 +518,12 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 			layout.lines.back().push_back(w);
 		}
 
-		size.x = 0;
-		size.y += size.height + layout.spacing;
+		if (span.linebreak && &span != &layout.spans.back())
+		{
+			size.x = 0;
+			size.y += size.height + layout.spacing;
+			layout.lines.push_back({});
+		}
 	}
 
 	if(alignment_ == PANGO_ALIGN_RIGHT && maximum_width != -1) {
@@ -534,9 +620,8 @@ void pango_text::rerender(const SDL_Rect& viewport)
 }
 
 bool pango_text::set_markup(std::string_view text, PangoLayout& layout) {
-	char* raw_text;
 	std::string semi_escaped;
-	bool valid = validate_markup(text, &raw_text, semi_escaped);
+	bool valid = validate_markup(text, semi_escaped);
 	if(semi_escaped != "") {
 		text = semi_escaped;
 	}
@@ -600,8 +685,39 @@ std::string pango_text::format_links(std::string_view text) const
 	return result.str();
 }
 
-bool pango_text::validate_markup(std::string_view text, char** raw_text, std::string& semi_escaped) const
+bool pango_text::validate_markup(std::string_view text, std::string& semi_escaped) const
 {
+	if(pango_parse_markup(text)) {
+		return true;
+	}
+
+	/*
+	 * The markup is invalid. Try to recover.
+	 *
+	 * The pango engine tested seems to accept stray single quotes »'« and
+	 * double quotes »"«. Stray ampersands »&« seem to give troubles.
+	 * So only try to recover from broken ampersands, by simply replacing them
+	 * with the escaped version.
+	 */
+	semi_escaped = semi_escape_text(std::string(text));
+
+	/*
+	 * If at least one ampersand is replaced the semi-escaped string
+	 * is longer than the original. If this isn't the case then the
+	 * markup wasn't (only) broken by ampersands in the first place.
+	 */
+	if(text.size() == semi_escaped.size()
+			|| !pango_parse_markup(semi_escaped)) {
+
+		/* Fixing the ampersands didn't work. */
+		return false;
+	}
+
+	/* Replacement worked, still warn the user about the error. */
+	WRN_GUI_L << "pango_text::" << __func__
+			<< " text '" << text
+			<< "' has unescaped ampersands '&', escaped them.\n";
+
 	return true;
 }
 

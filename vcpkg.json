@@ -38,6 +38,7 @@
     "boost-format",
     "boost-scope-exit",
     "boost-circular-buffer",
+    "boost-property-tree",
     "boost-ptr-container",
     "boost-test"
   ]

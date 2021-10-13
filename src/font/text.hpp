@@ -50,6 +50,7 @@ struct PangoLayout
 	{
     std::string text;
 		color_t color;
+		bool linebreak = false;
 	};
 
   struct word : span
@@ -61,7 +62,7 @@ struct PangoLayout
   std::vector<std::vector<word>> lines;
   std::vector<span> spans;
 
-  void set_text(const std::string_view &s);
+  void set_text(std::string s);
 	void set_markup(const std::string &s);
 };
 
@@ -443,7 +444,7 @@ private:
 	 */
 	bool set_markup(std::string_view text, PangoLayout& layout);
 
-	bool validate_markup(std::string_view text, char** raw_text, std::string& semi_escaped) const;
+	bool validate_markup(std::string_view text, std::string& semi_escaped) const;
 
 	static void copy_layout_properties(PangoLayout& src, PangoLayout& dst);
 
