@@ -47,6 +47,13 @@ void PangoLayout::set_text(const std::string_view &s)
 	boost::split(blocks, s, boost::is_any_of("\n\r"));
 }
 
+void PangoLayout::set_markup(const std::string &s)
+{
+	lines.clear();
+	blocks.clear();
+	boost::split(blocks, s, boost::is_any_of("\n\r"));
+}
+
 namespace font {
 
 pango_text::pango_text()
@@ -392,7 +399,7 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 {
 	PangoRectangle size = {};
 
-	p_font font{ get_font_families(font_class_), font_size_, font_style_ };
+	p_font font{get_font_families(font_class_), font_size_, font_style_};
 
 	int word_spacing;
 	TTF_SizeUTF8(font.get(), " ", &word_spacing, nullptr);
@@ -409,23 +416,20 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 	}
 
 	layout.lines.clear();
-	for (auto &b : layout.blocks) 
-	{
+	for(auto& b : layout.blocks) {
 		std::vector<std::string> parts;
 		boost::split(parts, b, boost::is_any_of(" "));
 
 		layout_.lines.push_back({});
-		for (auto &part : parts) 
-		{
+		for(auto& part : parts) {
 			TTF_SizeUTF8(font.get(), part.c_str(), &size.width, &size.height);
-			if (maximum_width != -1 && size.x + size.width > maximum_width) 
-			{
+			if(maximum_width != -1 && size.x + size.width > maximum_width) {
 				size.x = 0;
 				size.y += size.height + layout.spacing;
 				layout.lines.push_back({});
 			}
 
-			PangoLayout::word w{std::move(part), reinterpret_cast<const SDL_Rect &>(size)};
+			PangoLayout::word w{std::move(part), reinterpret_cast<const SDL_Rect&>(size)};
 			size.x += size.width + word_spacing;
 			layout.lines.back().push_back(w);
 		}
@@ -434,32 +438,26 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 		size.y += size.height + layout.spacing;
 	}
 
-	if (alignment_ == PANGO_ALIGN_RIGHT && maximum_width != -1)
-	{
-		for (auto &line : layout.lines) 
-		{
-			float diff = maximum_width - (line.back().bounds.x + line.back().bounds.w);
-			for (auto &word : line) 
+	if(alignment_ == PANGO_ALIGN_RIGHT && maximum_width != -1) {
+		for(auto& line : layout.lines) {
+			int diff = maximum_width - (line.back().bounds.x + line.back().bounds.w);
+			for(auto& word : line)
 				word.bounds.x += diff;
 		}
-	} 
-	else
-	if (alignment_ == PANGO_ALIGN_CENTER && maximum_width != -1)
-	{
-		for (auto &line : layout.lines) 
-		{
-			float diff = (maximum_width - (line.back().bounds.x + line.back().bounds.w)) / 2;
-			for (auto &word : line) 
+	} else if(alignment_ == PANGO_ALIGN_CENTER && maximum_width != -1) {
+		for(auto& line : layout.lines) {
+			int diff = (maximum_width - (line.back().bounds.x + line.back().bounds.w)) / 2;
+			for(auto& word : line)
 				word.bounds.x += diff;
 		}
 	}
 
 	SDL_Rect bounds = {};
-	for (auto &line : layout.lines)
-		for (auto &word : line)
+	for(auto& line : layout.lines)
+		for(auto& word : line)
 			SDL_UnionRect(&word.bounds, &bounds, &bounds);
 
-	size = reinterpret_cast<const PangoRectangle &>(bounds);
+	size = reinterpret_cast<const PangoRectangle&>(bounds);
 
 	DBG_GUI_L << "pango_text::" << __func__
 		<< " text '" << gui2::debug_truncate(text_)
@@ -544,9 +542,9 @@ bool pango_text::set_markup(std::string_view text, PangoLayout& layout) {
 	if(valid) {
 		if(link_aware_) {
 			std::string formatted_text = format_links(text);
-			layout.set_text(formatted_text);
+			layout.set_markup(formatted_text);
 		} else {
-			layout.set_text(text);
+			layout.set_markup(std::string(text));
 		}
 	} else {
 		ERR_GUI_L << "pango_text::" << __func__

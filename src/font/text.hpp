@@ -49,7 +49,8 @@ struct PangoLayout
   struct word
   {
     std::string text;
-	SDL_Rect bounds;
+    SDL_Rect bounds;
+		color_t color;
   };
 
   int spacing;
@@ -57,6 +58,7 @@ struct PangoLayout
   std::vector<std::string> blocks;
 
   void set_text(const std::string_view &s);
+	void set_markup(const std::string &s);
 };
 
 #include <functional>
