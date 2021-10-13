@@ -43,15 +43,15 @@
 void PangoLayout::set_text(const std::string_view &s)
 {
 	lines.clear();
-	blocks.clear();
-	boost::split(blocks, s, boost::is_any_of("\n\r"));
+	spans.clear();
+	boost::split(spans, s, boost::is_any_of("\n\r"));
 }
 
 void PangoLayout::set_markup(const std::string &s)
 {
 	lines.clear();
-	blocks.clear();
-	boost::split(blocks, s, boost::is_any_of("\n\r"));
+	spans.clear();
+	boost::split(spans, s, boost::is_any_of("\n\r"));
 }
 
 namespace font {
@@ -416,7 +416,7 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 	}
 
 	layout.lines.clear();
-	for(auto& b : layout.blocks) {
+	for(auto& b : layout.spans) {
 		std::vector<std::string> parts;
 		boost::split(parts, b, boost::is_any_of(" "));
 

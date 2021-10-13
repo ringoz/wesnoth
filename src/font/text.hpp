@@ -53,9 +53,11 @@ struct PangoLayout
 		color_t color;
   };
 
+	using span = std::string;
+
   int spacing;
   std::vector<std::vector<word>> lines;
-  std::vector<std::string> blocks;
+  std::vector<span> spans;
 
   void set_text(const std::string_view &s);
 	void set_markup(const std::string &s);
