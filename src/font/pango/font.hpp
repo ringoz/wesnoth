@@ -26,14 +26,17 @@ class p_font
 public:
 	p_font(const std::string& name, const unsigned size, font::pango_text::FONT_STYLE style)
 	{
-		static auto init = TTF_Init();
-		static std::unordered_map<unsigned, TTF_Font *> cache;
+		struct Deleter { void operator()(TTF_Font* f) { TTF_CloseFont(f); } };
+		static std::unordered_map<unsigned, std::unique_ptr<TTF_Font, Deleter>> cache;
 
 		auto &font = cache[size];
 		if (!font)
-			font = TTF_OpenFont("fonts/Lato-Medium.ttf", size);
+		{
+			static auto init = TTF_Init();
+			font.reset(TTF_OpenFont("fonts/Lato-Medium.ttf", size));
+		}
 
-		font_ = font;
+		font_ = font.get();
 	}
 
 	p_font(const p_font &) = delete;
