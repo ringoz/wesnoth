@@ -201,6 +201,16 @@ struct color_t
 		return !(*this == c);
 	}
 
+	color_t operator*(const color_t& c) const
+	{
+		return {
+			static_cast<uint8_t>(r * c.r / 255),
+			static_cast<uint8_t>(g * c.g / 255),
+			static_cast<uint8_t>(b * c.b / 255),
+			static_cast<uint8_t>(a * c.a / 255),
+		};
+	}
+
 	color_t blend_add(const color_t& c) const
 	{
 		// Do some magic to detect integer overflow

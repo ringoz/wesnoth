@@ -44,14 +44,16 @@ void PangoLayout::set_text(const std::string_view &s)
 {
 	lines.clear();
 	spans.clear();
-	boost::split(spans, s, boost::is_any_of("\n\r"));
+
+	std::vector<std::string> blocks;
+	boost::split(blocks, s, boost::is_any_of("\n\r"));
+	for (auto &block : blocks)
+		spans.push_back({std::move(block)});
 }
 
 void PangoLayout::set_markup(const std::string &s)
 {
-	lines.clear();
-	spans.clear();
-	boost::split(spans, s, boost::is_any_of("\n\r"));
+	set_text(s);
 }
 
 namespace font {
@@ -416,20 +418,20 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 	}
 
 	layout.lines.clear();
-	for(auto& b : layout.spans) {
-		std::vector<std::string> parts;
-		boost::split(parts, b, boost::is_any_of(" "));
+	for(auto& span : layout.spans) {
+		std::vector<std::string> words;
+		boost::split(words, span.text, boost::is_any_of(" "));
 
 		layout_.lines.push_back({});
-		for(auto& part : parts) {
-			TTF_SizeUTF8(font.get(), part.c_str(), &size.width, &size.height);
+		for(auto& word : words) {
+			TTF_SizeUTF8(font.get(), word.c_str(), &size.width, &size.height);
 			if(maximum_width != -1 && size.x + size.width > maximum_width) {
 				size.x = 0;
 				size.y += size.height + layout.spacing;
 				layout.lines.push_back({});
 			}
 
-			PangoLayout::word w{std::move(part), reinterpret_cast<const SDL_Rect&>(size)};
+			PangoLayout::word w{{std::move(word), span.color}, reinterpret_cast<const SDL_Rect&>(size)};
 			size.x += size.width + word_spacing;
 			layout.lines.back().push_back(w);
 		}
@@ -493,7 +495,7 @@ void pango_text::render(PangoLayout& layout, const SDL_Rect& viewport, const uns
 	{
 		for (auto &word : line) 
 		{
-			surface rendered = TTF_RenderUTF8_Blended(font.get(), word.text.c_str(), foreground_color_.to_sdl());
+			surface rendered = TTF_RenderUTF8_Blended(font.get(), word.text.c_str(), (foreground_color_ * word.color).to_sdl());
 			SDL_Rect srcrect = {0, 0, word.bounds.w, word.bounds.h};
 			SDL_BlitSurface(rendered.get(), &srcrect, surface_.get(), &word.bounds);
 		}

@@ -46,14 +46,16 @@ typedef struct
 
 struct PangoLayout
 {
-  struct word
-  {
+	struct span
+	{
     std::string text;
-    SDL_Rect bounds;
 		color_t color;
-  };
+	};
 
-	using span = std::string;
+  struct word : span
+  {
+    SDL_Rect bounds;
+  };
 
   int spacing;
   std::vector<std::vector<word>> lines;
