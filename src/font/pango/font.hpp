@@ -24,27 +24,18 @@ namespace font {
 class p_font
 {
 public:
-	p_font(const std::string& name, const unsigned size, font::pango_text::FONT_STYLE style)
+	p_font(const char *name, const unsigned size, font::pango_text::FONT_STYLE style)
 	{
-		struct Deleter { void operator()(TTF_Font* f) { TTF_CloseFont(f); } };
-		static std::unordered_map<unsigned, std::unique_ptr<TTF_Font, Deleter>> cache;
-
-		auto &font = cache[size];
-		if (!font)
-		{
-			static auto init = TTF_Init();
-			font.reset(TTF_OpenFont("fonts/Lato-Medium.ttf", size));
-		}
-
-		font_ = font.get();
+		static auto init = TTF_Init();		
+		font_ = TTF_OpenFont(name, size);
 	}
 
 	p_font(const p_font &) = delete;
 	p_font & operator = (const p_font &) = delete;
 
-	~p_font() {}
+	~p_font() { TTF_CloseFont(font_); }
 
-	TTF_Font* get() { return font_; }
+	TTF_Font* get() const { return font_; }
 
 private:
 	TTF_Font *font_;

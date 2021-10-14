@@ -39,31 +39,38 @@ typedef enum {
   PANGO_ELLIPSIZE_END
 } PangoEllipsizeMode;
 
-typedef struct
-{
+typedef struct {
 	int x, y, width, height;
 } PangoRectangle;
 
 struct PangoLayout
 {
+	struct face
+	{
+		int16_t size;
+		uint8_t family;
+		uint8_t style;
+	};
+
 	struct span
 	{
-    std::string text;
+		std::string text;
 		color_t color;
+		face font = {};
 		bool linebreak = false;
 	};
 
-  struct word : span
-  {
-    SDL_Rect bounds;
-  };
+	struct word : span
+	{
+		SDL_Rect bounds;
+	};
 
-  int spacing;
-  std::vector<std::vector<word>> lines;
-  std::vector<span> spans;
+	int spacing;
+	std::vector<std::vector<word>> lines;
+	std::vector<span> spans;
 
-  void set_text(std::string s);
-	void set_markup(const std::string &s);
+	void set_text(std::string s);
+	void set_markup(const std::string& s);
 };
 
 #include <functional>
@@ -445,8 +452,6 @@ private:
 	bool set_markup(std::string_view text, PangoLayout& layout);
 
 	bool validate_markup(std::string_view text, std::string& semi_escaped) const;
-
-	static void copy_layout_properties(PangoLayout& src, PangoLayout& dst);
 
 	std::string format_links(std::string_view text) const;
 };

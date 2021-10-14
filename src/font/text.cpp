@@ -43,14 +43,12 @@
 static void add_span(std::vector<PangoLayout::span> &spans, PangoLayout::span span)
 {
 	boost::algorithm::trim_if(span.text, isblank);
-	if (!span.text.empty())
-	{
+	if(!span.text.empty()) {
 		std::vector<std::string> blocks;
 		boost::split(blocks, std::move(span.text), boost::is_any_of("\n\r"));
 
 		spans.reserve(spans.size() + blocks.size());
-		for (auto &block : blocks)
-		{
+		for(auto& block : blocks) {
 			spans.push_back(span);
 			spans.back().text = std::move(block);
 			spans.back().linebreak = (&block != &blocks.back());
@@ -69,22 +67,22 @@ void PangoLayout::set_text(std::string s)
 #include <boost/property_tree/xml_parser.hpp>
 namespace pt = boost::property_tree;
 
-static void walk_ptree(pt::ptree &node, PangoLayout::span &span, const std::function<void(pt::ptree::value_type &entry, PangoLayout::span &span)> &callback)
+static void walk_ptree(pt::ptree &node, PangoLayout::span *pspan, const std::function<void(pt::ptree::value_type &entry, PangoLayout::span &span)> &callback)
 {
-	for (auto &entry : node)
-	{
+	for(auto& entry : node) {
 		PangoLayout::span newspan;
-		if (entry.first == "span")
-		{
-			newspan = span;
-			span = newspan;
+		if(entry.first == "span" || entry.first == "tt" || entry.first == "i" || entry.first == "b"
+			|| entry.first == "u" || entry.first == "big" || entry.first == "small") {
+			newspan = *pspan;
+			pspan = &newspan;
 		}
-		else
-			callback(entry, span);
 
-		walk_ptree(entry.second, span, callback);
+		callback(entry, *pspan);
+		walk_ptree(entry.second, pspan, callback);
 	}
 }
+
+namespace help { color_t string_to_color(const std::string &cmp_str); }
 
 void PangoLayout::set_markup(const std::string &s)
 {
@@ -95,29 +93,48 @@ void PangoLayout::set_markup(const std::string &s)
 	std::istringstream stream("<xml>" + s + "</xml>");
 	pt::read_xml(stream, tree, pt::xml_parser::no_concat_text);
 
-	PangoLayout::span span;
-	walk_ptree(tree, span, [&](auto &entry, PangoLayout::span &span)
-	{
-		if (entry.first == "color")
-		{
+	PangoLayout::span span = {};
+	walk_ptree(tree, &span, [&](auto& entry, PangoLayout::span& span) {
+		if(entry.first == "color" || entry.first == "fgcolor" || entry.first == "foreground") {
 			std::string col = std::move(entry.second.data());
-			if (col[0] == '#')
-				col.erase(0, 1);
-
-			if (col.size() == 3)
-			{
-				col.resize(6);
-				col[5] = col[4] = col[2];
-				col[3] = col[2] = col[1];
-				col[1] = col[0];
+			if(col.size() == 4 && col[0] == '#') {
+				col.resize(7);
+				col[6] = col[5] = col[3];
+				col[4] = col[3] = col[2];
+				col[2] = col[1];
 			}
-
-			assert(col.size() == 6);
-			span.color = color_t::from_hex_string(col);
-		}
-		else
-		if (entry.first == "<xmltext>")
-		{
+			span.color = help::string_to_color(col);
+		} else if(entry.first == "tt" || (entry.first == "font_family" && entry.second.data() == "monospace")) {
+			span.font.family = font::FONT_MONOSPACE;
+		} else if(entry.first == "i" || (entry.first == "style" && entry.second.data() == "italic")) {
+			span.font.style |= font::pango_text::STYLE_ITALIC;
+		} else if(entry.first == "b" || (entry.first == "weight" && entry.second.data() == "bold")) {
+			span.font.style |= font::pango_text::STYLE_BOLD;
+		} else if(entry.first == "u" || (entry.first == "underline" && entry.second.data() == "single")) {
+			span.font.style |= font::pango_text::STYLE_UNDERLINE;
+		} else if(entry.first == "big" || (entry.first == "size" && entry.second.data() == "larger")) {
+			span.font.size++;
+		} else if(entry.first == "small" || (entry.first == "size" && entry.second.data() == "smaller")) {
+			span.font.size--;
+		} else if(entry.first == "size") {
+			std::string size = std::move(entry.second.data());
+			if(size == "xx-small")
+				span.font.size = -3;
+			else if(size == "x-small")
+				span.font.size = -2;
+			else if(size == "small")
+				span.font.size = -1;
+			else if(size == "medium")
+				span.font.size = 0;
+			else if(size == "large")
+				span.font.size = 1;
+			else if(size == "x-large")
+				span.font.size = 2;
+			else if(size == "xx-large")
+				span.font.size = 3;
+			else
+				assert(0 && "unknown size");
+		} else if(entry.first == "<xmltext>") {
 			span.text = std::move(entry.second.data());
 			add_span(spans, span);
 		}
@@ -126,16 +143,72 @@ void PangoLayout::set_markup(const std::string &s)
 
 static bool pango_parse_markup(const std::string_view &s)
 {
-	try 
-	{
+	try {
 		PangoLayout layout;
 		layout.set_markup(std::string(s));
 		return true;
-	}
-	catch (...)
-	{
+	} catch(...) {
 		return false;
 	}
+}
+
+static const font::p_font &pango_font(const PangoLayout::face &font, font::family_class family, unsigned size, font::pango_text::FONT_STYLE style)
+{
+	PangoLayout::face key = {(int16_t)size, (uint8_t)family, (uint8_t)style};
+	if(font.family)
+		key.family = font.family;
+	if(font.size)
+		key.size *= powf(1.2f, font.size);
+	if(font.style)
+		key.style |= font.style;
+
+	static std::unordered_map<uint32_t, font::p_font> cache;
+	auto it = cache.find(reinterpret_cast<uint32_t&>(key));
+	if(it == cache.end()) {
+		const char* filename;
+		switch(key.family) {
+		case font::family_class::FONT_MONOSPACE:
+			if(key.style & font::pango_text::STYLE_BOLD)
+				filename = "fonts/DejaVuSansMono-Bold.ttf";
+			else
+				filename = "fonts/DejaVuSansMono.ttf";
+			break;
+		case font::family_class::FONT_LIGHT:
+			if(key.style & font::pango_text::STYLE_BOLD && key.style & font::pango_text::STYLE_ITALIC)
+				filename = "fonts/Lato-BoldItalic.ttf";
+			else if(key.style & font::pango_text::STYLE_BOLD)
+				filename = "fonts/Lato-Bold.ttf";
+			else if(key.style & font::pango_text::STYLE_ITALIC)
+				filename = "fonts/Lato-Italic.ttf";
+			else
+				filename = "fonts/Lato-Regular.ttf";
+			break;
+		case font::family_class::FONT_SCRIPT:
+			if(key.style & font::pango_text::STYLE_BOLD && key.style & font::pango_text::STYLE_ITALIC)
+				filename = "fonts/OldaniaADFStd-BoldItalic.otf";
+			else if(key.style & font::pango_text::STYLE_BOLD)
+				filename = "fonts/OldaniaADFStd-Bold.otf";
+			else if(key.style & font::pango_text::STYLE_ITALIC)
+				filename = "fonts/OldaniaADFStd-Italic.otf";
+			else
+				filename = "fonts/OldaniaADFStd-Regular.otf";
+			break;
+		case font::family_class::FONT_SANS_SERIF:
+		default:
+			if(key.style & font::pango_text::STYLE_BOLD && key.style & font::pango_text::STYLE_ITALIC)
+				filename = "fonts/Lato-HeavyItalic.ttf";
+			else if(key.style & font::pango_text::STYLE_BOLD)
+				filename = "fonts/Lato-Heavy.ttf";
+			else if(key.style & font::pango_text::STYLE_ITALIC)
+				filename = "fonts/Lato-MediumItalic.ttf";
+			else
+				filename = "fonts/Lato-Medium.ttf";
+		}
+		it = cache.emplace(std::piecewise_construct, std::forward_as_tuple(reinterpret_cast<uint32_t&>(key)),
+					 std::forward_as_tuple(filename, (unsigned)key.size, (font::pango_text::FONT_STYLE)key.style)).first;
+	}
+
+	return it->second;
 }
 
 namespace font {
@@ -459,12 +532,9 @@ pango_text& pango_text::set_add_outline(bool do_add)
 
 int pango_text::get_max_glyph_height() const
 {
-	p_font font{ get_font_families(font_class_), font_size_, font_style_ };
-
-	TTF_Font* f = font.get();
-
-	auto ascent = TTF_FontAscent(f);
-	auto descent = TTF_FontDescent(f);
+	const p_font &font = pango_font({}, font_class_, font_size_, font_style_);
+	auto ascent = TTF_FontAscent(font.get());
+	auto descent = TTF_FontDescent(font.get());
 
 	return ascent + descent;
 }
@@ -483,10 +553,11 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 {
 	PangoRectangle size = {};
 
-	p_font font{get_font_families(font_class_), font_size_, font_style_};
-
 	int word_spacing;
-	TTF_SizeUTF8(font.get(), " ", &word_spacing, nullptr);
+	{
+		const p_font &font = pango_font({}, font_class_, font_size_, font_style_);
+		TTF_SizeUTF8(font.get(), " ", &word_spacing, nullptr);
+	}
 
 	int maximum_width = 0;
 	if(characters_per_line_ != 0) {
@@ -503,17 +574,23 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 	layout.lines.push_back({});
 	for(auto& span : layout.spans) {
 		std::vector<std::string> words;
-		boost::split(words, span.text, boost::is_any_of(" "));
+		boost::split(words, span.text, isblank);
 
+		const p_font &font = pango_font(span.font, font_class_, font_size_, font_style_);
 		for(auto& word : words) {
-			TTF_SizeUTF8(font.get(), word.c_str(), &size.width, &size.height);
+			if (TTF_SizeUTF8(font.get(), word.empty() ? " " : word.c_str(), &size.width, &size.height))
+				continue;
+
+			if (size.x > 0 && (word == "," || word == "." || word == ";" || word == ":" || word == "?" || word == "!"))
+				size.x -= word_spacing;
+
 			if(maximum_width != -1 && size.x + size.width > maximum_width) {
 				size.x = 0;
 				size.y += size.height + layout.spacing;
 				layout.lines.push_back({});
 			}
 
-			PangoLayout::word w{{std::move(word), span.color}, reinterpret_cast<const SDL_Rect&>(size)};
+			PangoLayout::word w{{std::move(word), span.color, span.font}, reinterpret_cast<const SDL_Rect&>(size)};
 			size.x += size.width + word_spacing;
 			layout.lines.back().push_back(w);
 		}
@@ -575,15 +652,16 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 
 void pango_text::render(PangoLayout& layout, const SDL_Rect& viewport, const unsigned stride)
 {
-	p_font font{ get_font_families(font_class_), font_size_, font_style_ };
+	for(auto& line : layout.lines) {
+		for(auto& word : line) {
+			if(word.text.empty())
+				continue;
 
-	for (auto &line : layout.lines) 
-	{
-		for (auto &word : line) 
-		{
-			surface rendered = TTF_RenderUTF8_Blended(font.get(), word.text.c_str(), (foreground_color_ * word.color).to_sdl());
-			SDL_Rect srcrect = {0, 0, word.bounds.w, word.bounds.h};
-			SDL_BlitSurface(rendered.get(), &srcrect, surface_.get(), &word.bounds);
+			const p_font& font = pango_font(word.font, font_class_, font_size_, font_style_);
+			if(surface rendered = TTF_RenderUTF8_Blended(font.get(), word.text.c_str(), (foreground_color_ * word.color).to_sdl())) {
+				SDL_Rect srcrect = {0, 0, word.bounds.w, word.bounds.h};
+				SDL_BlitSurface(rendered.get(), &srcrect, surface_.get(), &word.bounds);
+			}
 		}
 	}
 }
@@ -721,10 +799,6 @@ bool pango_text::validate_markup(std::string_view text, std::string& semi_escape
 	return true;
 }
 
-void pango_text::copy_layout_properties(PangoLayout& src, PangoLayout& dst)
-{
-}
-
 std::vector<std::string> pango_text::get_lines() const
 {
 	this->recalculate();
@@ -734,9 +808,9 @@ std::vector<std::string> pango_text::get_lines() const
 		return {};
 	}
 
-	std::vector<std::string> res(count);
+	std::vector<std::string> res;	res.reserve(count);
 	for (auto &line : layout_.lines) 
-		res.back() = boost::join(line | boost::adaptors::transformed([](const auto &word){ return word.text; }), " ");
+		res.push_back(boost::join(line | boost::adaptors::transformed([](const auto &word){ return word.text; }), " "));
 
 	return res;
 }
