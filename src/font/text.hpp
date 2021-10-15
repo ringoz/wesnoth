@@ -57,16 +57,17 @@ struct PangoLayout
 		std::string text;
 		color_t color;
 		face font = {};
-		bool linebreak = false;
 	};
 
-	struct word : span
+	struct word
 	{
+		const span& span;
+		std::string_view text;
 		SDL_Rect bounds;
 	};
 
-	int spacing;
-	std::vector<std::vector<word>> lines;
+	int spacing = 0;
+	std::vector<word> words;
 	std::vector<span> spans;
 
 	void set_text(std::string s);
