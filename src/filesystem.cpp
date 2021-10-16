@@ -37,32 +37,11 @@
 #include <boost/iostreams/stream.hpp>
 #include "game_config_view.hpp"
 
-#ifdef _WIN32
-#include "log_windows.hpp"
-
-#include <boost/locale.hpp>
-
-#include <windows.h>
-#include <shlobj.h>
-#include <shlwapi.h>
-
-// Work around TDM-GCC not #defining this according to @newfrenchy83.
-#ifndef VOLUME_NAME_NONE
-#define VOLUME_NAME_NONE 0x4
-#endif
-
-#endif /* !_WIN32 */
-
 #include <algorithm>
 #include <set>
 
 // Copied from boost::predef, as it's there only since 1.55.
-#if defined(__APPLE__) && defined(__MACH__) && defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
-
-#define WESNOTH_BOOST_OS_IOS (__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__*1000)
 #include <SDL2/SDL_filesystem.h>
-
-#endif
 
 
 static lg::log_domain log_filesystem("filesystem");
@@ -195,39 +174,10 @@ public:
 	}
 };
 
-#ifdef _WIN32
-class static_runner
-{
-public:
-	static_runner()
-	{
-		// Boost uses the current locale to generate a UTF-8 one
-		std::locale utf8_loc = boost::locale::generator().generate("");
-
-		// use a custom locale because we want to use out log.hpp functions in case of an invalid string.
-		utf8_loc = std::locale(utf8_loc, new customcodecvt());
-
-		boost::filesystem::path::imbue(utf8_loc);
-	}
-};
-
-static static_runner static_bfs_path_imbuer;
-
-bool is_filename_case_correct(const std::string& fname, const boost::iostreams::file_descriptor_source& fd)
-{
-	wchar_t real_path[MAX_PATH];
-	GetFinalPathNameByHandleW(fd.handle(), real_path, MAX_PATH - 1, VOLUME_NAME_NONE);
-
-	std::string real_name = filesystem::base_name(unicode_cast<std::string>(std::wstring(real_path)));
-	return real_name == filesystem::base_name(fname);
-}
-
-#else
 bool is_filename_case_correct(const std::string& /*fname*/, const boost::iostreams::file_descriptor_source& /*fd*/)
 {
 	return true;
 }
-#endif
 } // namespace
 
 namespace filesystem
@@ -531,43 +481,8 @@ const std::string& get_version_path_suffix()
 	return suffix;
 }
 
-#if defined(__APPLE__) && !defined(__IPHONEOS__)
-	// Starting from Wesnoth 1.14.6, we have to use sandboxing function on macOS
-	// The problem is, that only signed builds can use sandbox. Unsigned builds
-	// would use other config directory then signed ones. So if we don't want
-	// to have two separate config dirs, we have to create symlink to new config
-	// location if exists. This part of code is only required on macOS.
-	static void migrate_apple_config_directory_for_unsandboxed_builds()
-	{
-		const char* home_str = getenv("HOME");
-		bfs::path home = home_str ? home_str : ".";
-
-		// We don't know which of the two is in PREFERENCES_DIR now.
-		boost::filesystem::path old_saves_dir = home / "Library/Application Support/Wesnoth_";
-		old_saves_dir += get_version_path_suffix();
-		boost::filesystem::path new_saves_dir = home / "Library/Containers/org.wesnoth.Wesnoth/Data/Library/Application Support/Wesnoth_";
-		new_saves_dir += get_version_path_suffix();
-
-		if(bfs::is_directory(new_saves_dir)) {
-			if(!bfs::exists(old_saves_dir)) {
-				std::cout << "Apple developer's userdata migration: ";
-				std::cout << "symlinking " << old_saves_dir << " to " << new_saves_dir << "\n";
-				bfs::create_symlink(new_saves_dir, old_saves_dir);
-			} else if(!bfs::symbolic_link_exists(old_saves_dir)) {
-				std::cout << "Apple developer's userdata migration: ";
-				std::cout << "Problem! Old (non-containerized) directory " << old_saves_dir << " is not a symlink. Your savegames are scattered around 2 locations.\n";
-			}
-			return;
-		}
-	}
-#endif
-
-
 static void setup_user_data_dir()
 {
-#if defined(__APPLE__) && !defined(__IPHONEOS__)
-	migrate_apple_config_directory_for_unsandboxed_builds();
-#endif
 	if(!file_exists(user_data_dir)) {
 		game_config::check_migration = true;
 	}
@@ -586,27 +501,7 @@ static void setup_user_data_dir()
 	create_directory_if_missing(user_data_dir / "data" / "add-ons");
 	create_directory_if_missing(user_data_dir / "saves");
 	create_directory_if_missing(user_data_dir / "persist");
-
-#ifdef _WIN32
-	lg::finish_log_file_setup();
-#endif
 }
-
-#ifdef _WIN32
-// As a convenience for portable installs on Windows, relative paths with . or
-// .. as the first component are considered relative to the current workdir
-// instead of Documents/My Games.
-static bool is_path_relative_to_cwd(const std::string& str)
-{
-	const bfs::path p(str);
-
-	if(p.empty()) {
-		return false;
-	}
-
-	return *p.begin() == "." || *p.begin() == "..";
-}
-#endif
 
 void set_user_data_dir(std::string newprefdir)
 {
@@ -619,99 +514,14 @@ void set_user_data_dir(std::string newprefdir)
 	}
 #endif
 
-#ifdef _WIN32
-	if(newprefdir.size() > 2 && newprefdir[1] == ':') {
-		// allow absolute path override
-		user_data_dir = newprefdir;
-	} else if(is_path_relative_to_cwd(newprefdir)) {
-		// Custom directory relative to workdir (for portable installs, etc.)
-		user_data_dir = get_cwd() + "/" + newprefdir;
-	} else {
-		if(newprefdir.empty()) {
-			newprefdir = "Wesnoth" + get_version_path_suffix();
-		} else {
-#ifdef PREFERENCES_DIR
-			if (newprefdir != PREFERENCES_DIR)
-#endif
-			{
-				// TRANSLATORS: translate the part inside <...> only
-				deprecated_message(_("--userdata-dir=<relative path that doesn't start with a period>"),
-					DEP_LEVEL::FOR_REMOVAL,
-					{1, 17, 0},
-					_("Use an absolute path, or a relative path that starts with a period and a backslash"));
-			}
-		}
-
-		PWSTR docs_path = nullptr;
-		HRESULT res = SHGetKnownFolderPath(FOLDERID_Documents, KF_FLAG_CREATE, nullptr, &docs_path);
-
-		if(res != S_OK) {
-			//
-			// Crummy fallback path full of pain and suffering.
-			//
-			ERR_FS << "Could not determine path to user's Documents folder! (" << std::hex << "0x" << res << std::dec << ") "
-				   << "User config/data directories may be unavailable for "
-				   << "this session. Please report this as a bug.\n";
-			user_data_dir = bfs::path(get_cwd()) / newprefdir;
-		} else {
-			bfs::path games_path = bfs::path(docs_path) / "My Games";
-			create_directory_if_missing(games_path);
-
-			user_data_dir = games_path / newprefdir;
-		}
-
-		CoTaskMemFree(docs_path);
-	}
-
-#else /*_WIN32*/
-
 	std::string backupprefdir = ".wesnoth" + get_version_path_suffix();
 
-#ifdef WESNOTH_BOOST_OS_IOS
 	char *sdl_pref_path = SDL_GetPrefPath("wesnoth.org", "iWesnoth");
 	if(sdl_pref_path) {
 		backupprefdir = std::string(sdl_pref_path) + backupprefdir;
 		SDL_free(sdl_pref_path);
 	}
-#endif
 
-#ifdef _X11
-	const char* home_str = getenv("HOME");
-
-	if(newprefdir.empty()) {
-		char const* xdg_data = getenv("XDG_DATA_HOME");
-		if(!xdg_data || xdg_data[0] == '\0') {
-			if(!home_str) {
-				newprefdir = backupprefdir;
-				goto other;
-			}
-
-			user_data_dir = home_str;
-			user_data_dir /= ".local/share";
-		} else {
-			user_data_dir = xdg_data;
-		}
-
-		user_data_dir /= "wesnoth";
-		user_data_dir /= get_version_path_suffix();
-	} else {
-	other:
-		bfs::path home = home_str ? home_str : ".";
-
-		if(newprefdir[0] == '/') {
-			user_data_dir = newprefdir;
-		} else {
-			if(!relative_ok) {
-				// TRANSLATORS: translate the part inside <...> only
-				deprecated_message(_("--userdata-dir=<relative path>"),
-					DEP_LEVEL::FOR_REMOVAL,
-					{1, 17, 0},
-					_("Use absolute paths. Relative paths are deprecated because they are interpreted relative to $HOME"));
-			}
-			user_data_dir = home / newprefdir;
-		}
-	}
-#else
 	if(newprefdir.empty()) {
 		newprefdir = backupprefdir;
 	}
@@ -719,21 +529,7 @@ void set_user_data_dir(std::string newprefdir)
 	const char* home_str = getenv("HOME");
 	bfs::path home = home_str ? home_str : ".";
 
-	if(newprefdir[0] == '/') {
-		user_data_dir = newprefdir;
-	} else {
-		if(!relative_ok) {
-			// TRANSLATORS: translate the part inside <...> only
-			deprecated_message(_("--userdata-dir=<relative path>"),
-				DEP_LEVEL::FOR_REMOVAL,
-				{1, 17, 0},
-				_("Use absolute paths. Relative paths are deprecated because they are interpreted relative to $HOME"));
-		}
-		user_data_dir = home / newprefdir;
-	}
-#endif
-
-#endif /*_WIN32*/
+	user_data_dir = newprefdir;
 	setup_user_data_dir();
 	user_data_dir = normalize_path(user_data_dir.string(), true, true);
 }
@@ -763,27 +559,7 @@ static const bfs::path& get_user_data_path()
 std::string get_user_config_dir()
 {
 	if(user_config_dir.empty()) {
-#if defined(_X11) && !defined(PREFERENCES_DIR)
-		char const* xdg_config = getenv("XDG_CONFIG_HOME");
-
-		if(!xdg_config || xdg_config[0] == '\0') {
-			xdg_config = getenv("HOME");
-			if(!xdg_config) {
-				user_config_dir = get_user_data_path();
-				return user_config_dir.string();
-			}
-
-			user_config_dir = xdg_config;
-			user_config_dir /= ".config";
-		} else {
-			user_config_dir = xdg_config;
-		}
-
-		user_config_dir /= "wesnoth";
-		set_user_config_path(user_config_dir);
-#else
 		user_config_dir = get_user_data_path();
-#endif
 	}
 
 	return user_config_dir.string();
@@ -797,27 +573,7 @@ std::string get_user_data_dir()
 std::string get_cache_dir()
 {
 	if(cache_dir.empty()) {
-#if defined(_X11) && !defined(PREFERENCES_DIR)
-		char const* xdg_cache = getenv("XDG_CACHE_HOME");
-
-		if(!xdg_cache || xdg_cache[0] == '\0') {
-			xdg_cache = getenv("HOME");
-			if(!xdg_cache) {
-				cache_dir = get_dir(get_user_data_path() / "cache");
-				return cache_dir.string();
-			}
-
-			cache_dir = xdg_cache;
-			cache_dir /= ".cache";
-		} else {
-			cache_dir = xdg_cache;
-		}
-
-		cache_dir /= "wesnoth";
-		create_directory_if_missing_recursive(cache_dir);
-#else
 		cache_dir = get_dir(get_user_data_path() / "cache");
-#endif
 	}
 
 	return cache_dir.string();
@@ -825,55 +581,7 @@ std::string get_cache_dir()
 
 std::vector<other_version_dir> find_other_version_saves_dirs()
 {
-#if !defined(_WIN32) && !defined(_X11) && !defined(__APPLE__)
-	// By all means, this situation doesn't make sense
 	return {};
-#else
-	const auto& w_ver = game_config::wesnoth_version;
-	const auto& ms_ver = game_config::min_savegame_version;
-
-	if(w_ver.major_version() != 1 || ms_ver.major_version() != 1) {
-		// Unimplemented, assuming that version 2 won't use WML-based saves
-		return {};
-	}
-
-	std::vector<other_version_dir> result;
-
-	// For 1.16, check for saves from all versions up to 1.20.
-	for(auto minor = w_ver.minor_version() + 4; minor >= ms_ver.minor_version(); --minor) {
-		if(minor == w_ver.minor_version())
-			continue;
-
-		auto version = version_info{};
-		version.set_major_version(w_ver.major_version());
-		version.set_minor_version(minor);
-		auto suffix = get_version_path_suffix(version);
-
-		bfs::path path;
-
-		//
-		// NOTE:
-		// This is a bit of a naive approach. We assume on all platforms that
-		// get_user_data_path() will return something resembling the default
-		// configuration and that --user-data-dir wasn't used. We will get
-		// false negatives when any of these conditions don't hold true.
-		//
-
-#if defined(_WIN32)
-		path = get_user_data_path().parent_path() / ("Wesnoth" + suffix) / "saves";
-#elif defined(_X11)
-		path = get_user_data_path().parent_path() / suffix / "saves";
-#elif defined(__APPLE__)
-		path = get_user_data_path().parent_path() / ("Wesnoth_" + suffix) / "saves";
-#endif
-
-		if(bfs::exists(path)) {
-			result.emplace_back(suffix, path.string());
-		}
-	}
-
-	return result;
-#endif
 }
 
 std::string get_cwd()
@@ -906,32 +614,10 @@ bool set_cwd(const std::string& dir)
 
 std::string get_exe_dir()
 {
-#ifdef _WIN32
-	wchar_t process_path[MAX_PATH];
-	SetLastError(ERROR_SUCCESS);
-
-	GetModuleFileNameW(nullptr, process_path, MAX_PATH);
-
-	if(GetLastError() != ERROR_SUCCESS) {
-		return get_cwd();
-	}
-
-	bfs::path exe(process_path);
-	return exe.parent_path().string();
-#else
-	if(bfs::exists("/proc/")) {
-		bfs::path self_exe("/proc/self/exe");
-		error_code ec;
-		bfs::path exe = bfs::read_symlink(self_exe, ec);
-		if(ec) {
-			return std::string();
-		}
-
-		return exe.parent_path().string();
-	} else {
-		return get_cwd();
-	}
-#endif
+	char *path = SDL_GetBasePath();
+	std::string result(path);
+	SDL_free(path);
+	return result;
 }
 
 bool make_directory(const std::string& dirname)
@@ -1212,35 +898,9 @@ char path_separator()
 
 bool is_root(const std::string& path)
 {
-#ifndef _WIN32
 	error_code ec;
 	const bfs::path& p = bfs::canonical(path, ec);
 	return ec ? false : !p.has_parent_path();
-#else
-	//
-	// Boost.Filesystem is completely unreliable when it comes to detecting
-	// whether a path refers to a drive's root directory on Windows, so we are
-	// forced to take an alternative approach here. Instead of hand-parsing
-	// strings we'll just call a graphical shell service.
-	//
-	// There are several poorly-documented ways to refer to a drive in Windows by
-	// escaping the filesystem namespace using \\.\, \\?\, and \??\. We're just
-	// going to ignore those here, which may yield unexpected results in places
-	// such as the file dialog. This function really shouldn't be used for
-	// security validation anyway, and there are virtually infinite ways to name
-	// a drive's root using the NT object namespace so it's pretty pointless to
-	// try to catch those there.
-	//
-	// (And no, shlwapi.dll's PathIsRoot() doesn't recognize \\.\C:\, \\?\C:\, or
-	// \??\C:\ as roots either.)
-	//
-	// More generally, do NOT use this code in security-sensitive applications.
-	//
-	// See also: <https://googleprojectzero.blogspot.com/2016/02/the-definitive-guide-on-win32-to-nt.html>
-	//
-	const std::wstring& wpath = bfs::path{path}.make_preferred().wstring();
-	return PathIsRootW(wpath.c_str()) == TRUE;
-#endif
 }
 
 std::string root_name(const std::string& path)
