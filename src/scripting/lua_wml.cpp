@@ -87,7 +87,7 @@ static int intf_load_wml(lua_State* L)
 	if(preprocess) {
 		stream = preprocess_file(wml_file, &defines_map);
 	} else {
-		stream.reset(new std::ifstream(wml_file));
+		stream = filesystem::istream_file(wml_file);
 	}
 	read(result, *stream, validator.get());
 	luaW_pushconfig(L, result);

@@ -32,9 +32,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-#include <boost/iostreams/device/file_descriptor.hpp>
-#include <boost/iostreams/stream.hpp>
 #include "game_config_view.hpp"
 
 #include <algorithm>
@@ -59,125 +56,6 @@ namespace
 const std::string maincfg_filename = "_main.cfg";
 const std::string finalcfg_filename = "_final.cfg";
 const std::string initialcfg_filename = "_initial.cfg";
-
-// only used by windows but put outside the ifdef to let it check by ci build.
-class customcodecvt : public std::codecvt<wchar_t /*intern*/, char /*extern*/, std::mbstate_t>
-{
-private:
-	// private static helper things
-	template<typename char_t_to>
-	struct customcodecvt_do_conversion_writer
-	{
-		customcodecvt_do_conversion_writer(char_t_to*& _to_next, char_t_to* _to_end)
-			: to_next(_to_next)
-			, to_end(_to_end)
-		{
-		}
-
-		char_t_to*& to_next;
-		char_t_to* to_end;
-
-		bool can_push(std::size_t count) const
-		{
-			return static_cast<std::size_t>(to_end - to_next) > count;
-		}
-
-		void push(char_t_to val)
-		{
-			assert(to_next != to_end);
-			*to_next++ = val;
-		}
-	};
-
-	template<typename char_t_from, typename char_t_to>
-	static void customcodecvt_do_conversion(std::mbstate_t& /*state*/,
-			const char_t_from* from,
-			const char_t_from* from_end,
-			const char_t_from*& from_next,
-			char_t_to* to,
-			char_t_to* to_end,
-			char_t_to*& to_next)
-	{
-		typedef typename ucs4_convert_impl::convert_impl<char_t_from>::type impl_type_from;
-		typedef typename ucs4_convert_impl::convert_impl<char_t_to>::type impl_type_to;
-
-		from_next = from;
-		to_next = to;
-		customcodecvt_do_conversion_writer<char_t_to> writer(to_next, to_end);
-
-		while(from_next != from_end) {
-			impl_type_to::write(writer, impl_type_from::read(from_next, from_end));
-		}
-	}
-
-public:
-	// Not used by boost filesystem
-	int do_encoding() const noexcept
-	{
-		return 0;
-	}
-
-	// Not used by boost filesystem
-	bool do_always_noconv() const noexcept
-	{
-		return false;
-	}
-
-	int do_length(std::mbstate_t& /*state*/, const char* /*from*/, const char* /*from_end*/, std::size_t /*max*/) const
-	{
-		// Not used by boost filesystem
-		throw "Not supported";
-	}
-
-	std::codecvt_base::result unshift(
-			std::mbstate_t& /*state*/, char* /*to*/, char* /*to_end*/, char*& /*to_next*/) const
-	{
-		// Not used by boost filesystem
-		throw "Not supported";
-	}
-
-	// there are still some methods which could be implemented but aren't because boost filesystem won't use them.
-	std::codecvt_base::result do_in(std::mbstate_t& state,
-			const char* from,
-			const char* from_end,
-			const char*& from_next,
-			wchar_t* to,
-			wchar_t* to_end,
-			wchar_t*& to_next) const
-	{
-		try {
-			customcodecvt_do_conversion<char, wchar_t>(state, from, from_end, from_next, to, to_end, to_next);
-		} catch(...) {
-			ERR_FS << "Invalid UTF-8 string'" << std::string(from, from_end) << "' " << std::endl;
-			return std::codecvt_base::error;
-		}
-
-		return std::codecvt_base::ok;
-	}
-
-	std::codecvt_base::result do_out(std::mbstate_t& state,
-			const wchar_t* from,
-			const wchar_t* from_end,
-			const wchar_t*& from_next,
-			char* to,
-			char* to_end,
-			char*& to_next) const
-	{
-		try {
-			customcodecvt_do_conversion<wchar_t, char>(state, from, from_end, from_next, to, to_end, to_next);
-		} catch(...) {
-			ERR_FS << "Invalid UTF-16 string" << std::endl;
-			return std::codecvt_base::error;
-		}
-
-		return std::codecvt_base::ok;
-	}
-};
-
-bool is_filename_case_correct(const std::string& /*fname*/, const boost::iostreams::file_descriptor_source& /*fd*/)
-{
-	return true;
-}
 } // namespace
 
 namespace filesystem
@@ -687,66 +565,6 @@ std::string read_file(const std::string& fname)
 	std::stringstream ss;
 	ss << is->rdbuf();
 	return ss.str();
-}
-
-filesystem::scoped_istream istream_file(const std::string& fname, bool treat_failure_as_error)
-{
-	LOG_FS << "Streaming " << fname << " for reading.\n";
-
-	if(fname.empty()) {
-		ERR_FS << "Trying to open file with empty name.\n";
-		filesystem::scoped_istream s(new bfs::ifstream());
-		s->clear(std::ios_base::failbit);
-		return s;
-	}
-
-	// mingw doesn't  support std::basic_ifstream::basic_ifstream(const wchar_t* fname)
-	// that why boost::filesystem::fstream.hpp doesn't work with mingw.
-	try {
-		boost::iostreams::file_descriptor_source fd(bfs::path(fname), std::ios_base::binary);
-
-		// TODO: has this still use ?
-		if(!fd.is_open() && treat_failure_as_error) {
-			ERR_FS << "Could not open '" << fname << "' for reading.\n";
-		} else if(!is_filename_case_correct(fname, fd)) {
-			ERR_FS << "Not opening '" << fname << "' due to case mismatch.\n";
-			filesystem::scoped_istream s(new bfs::ifstream());
-			s->clear(std::ios_base::failbit);
-			return s;
-		}
-
-		return std::make_unique<boost::iostreams::stream<boost::iostreams::file_descriptor_source>>(fd, 4096, 0);
-	} catch(const std::exception&) {
-		if(treat_failure_as_error) {
-			ERR_FS << "Could not open '" << fname << "' for reading.\n";
-		}
-
-		filesystem::scoped_istream s(new bfs::ifstream());
-		s->clear(std::ios_base::failbit);
-		return s;
-	}
-}
-
-filesystem::scoped_ostream ostream_file(const std::string& fname, std::ios_base::openmode mode, bool create_directory)
-{
-	LOG_FS << "streaming " << fname << " for writing.\n";
-#if 1
-	try {
-		boost::iostreams::file_descriptor_sink fd(bfs::path(fname), mode);
-		return std::make_unique<boost::iostreams::stream<boost::iostreams::file_descriptor_sink>>(fd, 4096, 0);
-	} catch(const BOOST_IOSTREAMS_FAILURE& e) {
-		// If this operation failed because the parent directory didn't exist, create the parent directory and
-		// retry.
-		error_code ec_unused;
-		if(create_directory && bfs::create_directories(bfs::path(fname).parent_path(), ec_unused)) {
-			return ostream_file(fname, mode, false);
-		}
-
-		throw filesystem::io_exception(e.what());
-	}
-#else
-	return new bfs::ofstream(bfs::path(fname), mode);
-#endif
 }
 
 // Throws io_exception if an error occurs

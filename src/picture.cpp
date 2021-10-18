@@ -568,7 +568,7 @@ static surface load_image_data_uri(const image::locator& loc)
 		ERR_DP << "Data URI not of image MIME type: " << parsed.mime << std::endl;
 	} else {
 		const std::vector<uint8_t> image_data = base64::decode(parsed.data);
-		filesystem::rwops_ptr rwops{SDL_RWFromConstMem(image_data.data(), image_data.size()), &SDL_RWclose};
+		filesystem::rwops_ptr rwops{SDL_RWFromConstMem(image_data.data(), image_data.size())};
 
 		if(image_data.empty()) {
 			ERR_DP << "Invalid encoding in data URI" << std::endl;

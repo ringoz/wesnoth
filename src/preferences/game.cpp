@@ -861,9 +861,13 @@ compression::format save_compression_format()
 	// "yes" was used in 1.11.7 and earlier; the compress_saves
 	// option used to be a toggle for gzip in those versions.
 	if(choice.empty() || choice == "gzip" || choice == "yes") {
+#ifdef HAVE_ZLIB
 		return compression::GZIP;
+#endif
 	} else if(choice == "bzip2") {
+#ifdef HAVE_BZIP2
 		return compression::BZIP2;
+#endif
 	} else if(choice == "none" || choice == "no") { // see above
 		return compression::NONE;
 	} /*else*/
@@ -871,7 +875,11 @@ compression::format save_compression_format()
 	// In case the preferences file was created by a later version
 	// supporting some algorithm we don't; although why would anyone
 	// playing a game need more algorithms, really...
+#ifdef HAVE_ZLIB
 	return compression::GZIP;
+#else
+	return compression::NONE;
+#endif
 }
 
 std::string get_chat_timestamp(const std::time_t& t)
