@@ -30,7 +30,8 @@
 #include "gui/widgets/window.hpp"
 #include "picture.hpp"
 
-#include <boost/filesystem/path.hpp>
+#include <filesystem>
+namespace bfs = std::filesystem;
 
 #include <functional>
 #include <stdexcept>
@@ -88,7 +89,7 @@ void screenshot_notification::save_screenshot()
 {
 	text_box& path_box = find_widget<text_box>(get_window(), "path", false);
 	std::string filename = path_box.get_value();
-	boost::filesystem::path path(screenshots_dir_path_);
+	bfs::path path(screenshots_dir_path_);
 	path /= filename;
 
 	path_ = path.string();

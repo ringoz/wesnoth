@@ -24,28 +24,10 @@
 #include "preferences/general.hpp"
 #include "serialization/unicode.hpp"
 
-#if !defined(_WIN32) && !defined(__APPLE__)
-#include <boost/filesystem.hpp>
-#endif
-
-#ifndef _WIN32
-
-// For username stuff on Unix:
-#include <pwd.h>
-#include <sys/types.h>
-
-#else // _WIN32
-
-#ifndef UNICODE
-#define UNICODE
-#endif
-
-#define WIN32_LEAN_AND_MEAN
-
-#include <windows.h>
-#include <shlobj.h>
-
-#endif
+#include <filesystem>
+namespace bfs = std::filesystem;
+using std::error_code;
+using std::errc;
 
 static lg::log_domain log_desktop("desktop");
 #define ERR_DU LOG_STREAM(err,   log_desktop)
@@ -60,47 +42,6 @@ namespace
 
 void enumerate_storage_devices(std::vector<path_info>& res)
 {
-#ifdef _WIN32
-
-	const DWORD drive_table = GetLogicalDrives();
-
-	for(unsigned n = 0; n < 26; ++n) {
-		if((drive_table >> n) & 1) {
-			std::string u8drive = "A:";
-			u8drive[0] += n;
-
-			LOG_DU << "enumerate_win32_drives(): " << u8drive << " is reported to be present\n";
-
-			wchar_t drive[] = L"A:\\";
-			drive[0] += n;
-
-			const DWORD label_bufsize = MAX_PATH + 1;
-			wchar_t label[label_bufsize] { 0 };
-
-			if(GetVolumeInformation(drive, label, label_bufsize, nullptr, nullptr, nullptr, nullptr, 0) == 0) {
-				// Probably an empty removable drive, just ignore it and carry on.
-				const DWORD err = GetLastError();
-				LOG_DU << "enumerate_win32_drives(): GetVolumeInformation() failed (" << err << ")\n";
-				continue;
-			}
-
-			// Trailing slash so that we don't get compatibility per-drive working dirs
-			// involved in path resolution.
-			res.push_back({u8drive, unicode_cast<std::string>(std::wstring{label}), u8drive + '\\'});
-		}
-	}
-
-#elif defined(__APPLE__)
-
-	// Probably as unreliable as /media|/mnt on other platforms, not worth
-	// examining in detail.
-	res.push_back({{ N_("filesystem_path_system^Volumes"), GETTEXT_DOMAIN }, "", "/Volumes"});
-
-#else
-
-	namespace bsys = boost::system;
-	namespace bfs = boost::filesystem;
-
 	// These are either used as mount points themselves, or host mount points. The
 	// reasoning here is that if any or all of them are non-empty, they are
 	// probably used for _something_ that might be of interest to the user (if not
@@ -108,7 +49,7 @@ void enumerate_storage_devices(std::vector<path_info>& res)
 	static const std::vector<std::string> candidates { "/media", "/mnt" };
 
 	for(const auto& mnt : candidates) {
-		bsys::error_code e;
+		error_code e;
 		try {
 			if(bfs::is_directory(mnt, e) && !bfs::is_empty(mnt, e) && !e) {
 				DBG_DU << "enumerate_mount_parents(): " << mnt << " appears to be a non-empty dir\n";
@@ -121,8 +62,6 @@ void enumerate_storage_devices(std::vector<path_info>& res)
 			DBG_DU << "caught exception in enumerate_storage_devices\n";
 		}
 	}
-
-#endif
 }
 
 bool have_path(const std::vector<path_info>& pathset, const std::string& path)
@@ -156,26 +95,7 @@ inline void commit_bookmarks_config(config& cfg)
 
 std::string user_profile_dir()
 {
-#ifndef _WIN32
-
-	// TODO: The filesystem API uses $HOME for this purpose, which may be
-	//       overridden or missing. Not sure which one really makes more sense
-	//       for us here.
-	const passwd* const pwd = getpwuid(geteuid());
-
-	if(!pwd || !pwd->pw_dir || !*pwd->pw_dir) {
-		return "";
-	}
-
-	return pwd->pw_dir;
-
-#else // _WIN32
-
-	wchar_t profile_path[MAX_PATH];
-	HRESULT res = SHGetFolderPath(nullptr, CSIDL_PROFILE, nullptr, SHGFP_TYPE_CURRENT, profile_path);
-	return res != S_OK ? "" : unicode_cast<std::string>(std::wstring{profile_path});
-
-#endif // _WIN32
+	return "~";
 }
 
 std::string path_info::display_name() const
@@ -230,11 +150,9 @@ std::vector<path_info> system_paths(unsigned path_types)
 		enumerate_storage_devices(res);
 	}
 
-#ifndef _WIN32
 	if(path_types & SYSTEM_ROOTFS) {
 		res.push_back({{ N_("filesystem_path_system^Root"), GETTEXT_DOMAIN }, "", "/"});
 	}
-#endif
 
 	return res;
 }

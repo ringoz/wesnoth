@@ -15,7 +15,6 @@
     "sdl2-ttf",
     "bzip2",
     "zlib",
-    "boost-filesystem",
     "boost-iostreams",
     {
       "name": "boost-locale",

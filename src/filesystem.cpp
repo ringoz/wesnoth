@@ -31,7 +31,6 @@
 #include "serialization/unicode_cast.hpp"
 
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 #include "game_config_view.hpp"
 
 #include <algorithm>
@@ -47,8 +46,10 @@ static lg::log_domain log_filesystem("filesystem");
 #define WRN_FS LOG_STREAM(warn, log_filesystem)
 #define ERR_FS LOG_STREAM(err, log_filesystem)
 
-namespace bfs = boost::filesystem;
-using boost::system::error_code;
+#include <filesystem>
+namespace bfs = std::filesystem;
+using std::error_code;
+using std::errc;
 
 namespace
 {
@@ -74,7 +75,7 @@ static void push_if_exists(std::vector<std::string>* vec, const bfs::path& file,
 
 static inline bool error_except_not_found(const error_code& ec)
 {
-	return ec && ec != boost::system::errc::no_such_file_or_directory;
+	return ec && ec != errc::no_such_file_or_directory;
 }
 
 static bool is_directory_internal(const bfs::path& fpath)
@@ -221,7 +222,7 @@ void get_files_in_dir(const std::string& dir,
 			continue;
 		}
 
-		if(st.type() == bfs::regular_file) {
+		if(st.type() == bfs::file_type::regular) {
 			{
 				std::string basename = di->path().filename().string();
 				if(filter == filter_mode::SKIP_PBL_FILES && looks_like_pbl(basename))
@@ -233,7 +234,7 @@ void get_files_in_dir(const std::string& dir,
 			push_if_exists(files, di->path(), mode == name_mode::ENTIRE_FILE_PATH);
 
 			if(checksum != nullptr) {
-				std::time_t mtime = bfs::last_write_time(di->path(), ec);
+				std::time_t mtime = std::chrono::duration_cast<std::chrono::seconds>(bfs::last_write_time(di->path(), ec).time_since_epoch()).count();
 				if(ec) {
 					LOG_FS << "Failed to read modification time of " << di->path().string() << ": " << ec.message()
 						   << '\n';
@@ -250,7 +251,7 @@ void get_files_in_dir(const std::string& dir,
 
 				checksum->nfiles++;
 			}
-		} else if(st.type() == bfs::directory_file) {
+		} else if(st.type() == bfs::file_type::directory) {
 			std::string basename = di->path().filename().string();
 
 			if(!basename.empty() && basename[0] == '.') {
@@ -266,7 +267,7 @@ void get_files_in_dir(const std::string& dir,
 
 			if(error_except_not_found(ec)) {
 				LOG_FS << "Failed to get file status of " << inner_main.string() << ": " << ec.message() << '\n';
-			} else if(reorder == reorder_mode::DO_REORDER && main_st.type() == bfs::regular_file) {
+			} else if(reorder == reorder_mode::DO_REORDER && main_st.type() == bfs::file_type::regular) {
 				LOG_FS << "_main.cfg found : "
 					   << (mode == name_mode::ENTIRE_FILE_PATH ? inner_main.string() : inner_main.filename().string()) << '\n';
 				push_if_exists(files, inner_main, mode == name_mode::ENTIRE_FILE_PATH);
@@ -615,7 +616,7 @@ bool file_exists(const std::string& name)
 std::time_t file_modified_time(const std::string& fname)
 {
 	error_code ec;
-	std::time_t mtime = bfs::last_write_time(bfs::path(fname), ec);
+	std::time_t mtime = std::chrono::duration_cast<std::chrono::seconds>(bfs::last_write_time(bfs::path(fname), ec).time_since_epoch()).count();
 	if(ec) {
 		LOG_FS << "Failed to read modification time of " << fname << ": " << ec.message() << '\n';
 	}
@@ -973,9 +974,7 @@ std::string get_wml_location(const std::string& filename, const std::string& cur
 		return std::string();
 	}
 
-	assert(game_config::path.empty() == false);
-
-	bfs::path fpath(filename);
+	bfs::path fpath(filename[0] == '/' ? filename.substr(1) : filename);
 	bfs::path result;
 
 	if(filename[0] == '~') {
@@ -988,9 +987,9 @@ std::string get_wml_location(const std::string& filename, const std::string& cur
 			result /= bfs::path(game_config::path) / "data";
 		}
 
-		result /= filename;
-	} else if(!game_config::path.empty()) {
-		result /= bfs::path(game_config::path) / "data" / filename;
+		result /= fpath;
+	} else {
+		result /= bfs::path(game_config::path) / "data" / fpath;
 	}
 
 	if(result.empty() || !file_exists(result)) {

@@ -15,10 +15,10 @@
 
 #include "wml_equivalence.hpp"
 #include "serialization/parser.hpp"
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/test/unit_test.hpp>
 
-namespace bfs = boost::filesystem;
+namespace bfs = std::filesystem;
 /**
  * Self destructive temporary file at the current directory.
  * @pre An other user does not have a file with the same name.

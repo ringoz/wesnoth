@@ -35,7 +35,9 @@
 #include "serialization/unicode_cast.hpp"
 
 #include <boost/system/error_code.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
+namespace bfs = std::filesystem;
+using std::error_code;
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -104,7 +106,6 @@ filesystem::scoped_ostream ostream_file_with_delete(const std::string& fname)
 {
 	LOG_FS << "streaming " << fname << " for writing with delete access.\n";
 
-	namespace bfs = boost::filesystem;
 	const auto& w_name = unicode_cast<std::wstring>(fname);
 
 	try {
@@ -125,7 +126,7 @@ filesystem::scoped_ostream ostream_file_with_delete(const std::string& fname)
 		return std::make_unique<stream_type>(fd, 4096, 0);
 	} catch(const BOOST_IOSTREAMS_FAILURE& e) {
 		// Create directories if needed and try again
-		boost::system::error_code ec_unused;
+		error_code ec_unused;
 		if(bfs::create_directories(bfs::path{fname}.parent_path(), ec_unused)) {
 			return ostream_file_with_delete(fname);
 		}
