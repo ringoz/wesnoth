@@ -33,7 +33,7 @@ link_directories(
 	${LIBDBUS_LIBRARY_DIRS}
 )
 
-set(common-external-libs ${ICU_DATA_LIBRARY} ${ICU_I18N_LIBRARY} ${ICU_UC_LIBRARY})
+set(common-external-libs ${ICU_DATA_LIBRARY} ${ICU_I18N_LIBRARY} ${ICU_UC_LIBRARY} ${SDL2_LIBRARY})
 if(WIN32)
 	set(common-external-libs ${common-external-libs} shlwapi.lib winmm.lib crypt32.lib)
 elseif(MINGW)
@@ -57,7 +57,6 @@ endif()
 
 set(game-external-libs
 	${common-external-libs}
-	${SDL2_LIBRARY}
 	${SDL2_IMAGE_LIBRARY}
 	${SDL2_MIXER_LIBRARY}
 	${SDL2_TTF_LIBRARY}

@@ -7,6 +7,7 @@ config_cache.cpp
 crypt_blowfish/crypt_blowfish.c
 filesystem.cpp
 filesystem_common.cpp
+filesystem_sdl.cpp
 font/constants.cpp
 game_config.cpp
 game_config_view.cpp
