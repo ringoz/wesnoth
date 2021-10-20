@@ -46,8 +46,13 @@ static lg::log_domain log_filesystem("filesystem");
 #define WRN_FS LOG_STREAM(warn, log_filesystem)
 #define ERR_FS LOG_STREAM(err, log_filesystem)
 
+#ifdef NANOHEX
+#include <OS/filesystem>
+namespace bfs = OS::filesystem;
+#else
 #include <filesystem>
 namespace bfs = std::filesystem;
+#endif
 using std::error_code;
 using std::errc;
 
@@ -493,10 +498,7 @@ bool set_cwd(const std::string& dir)
 
 std::string get_exe_dir()
 {
-	char *path = SDL_GetBasePath();
-	std::string result(path);
-	SDL_free(path);
-	return result;
+	return get_cwd();
 }
 
 bool make_directory(const std::string& dirname)
@@ -890,19 +892,17 @@ const std::vector<std::string>& get_binary_paths(const std::string& type)
 	init_binary_paths();
 
 	for(const std::string& path : binary_paths) {
+#ifndef NANOHEX		
 		res.push_back(get_user_data_dir() + "/" + path + type + "/");
-
-		if(!game_config::path.empty()) {
-			res.push_back(game_config::path + "/" + path + type + "/");
-		}
+#endif		
+		res.push_back(game_config::path + "/" + path + type + "/");
 	}
 
 	// not found in "/type" directory, try main directory
+#ifndef NANOHEX		
 	res.push_back(get_user_data_dir() + "/");
-
-	if(!game_config::path.empty()) {
-		res.push_back(game_config::path + "/");
-	}
+#endif
+	res.push_back(game_config::path + "/");
 
 	return res;
 }
