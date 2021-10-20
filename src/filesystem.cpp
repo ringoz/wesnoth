@@ -161,7 +161,7 @@ static bool create_directory_if_missing_recursive(const bfs::path& dirpath)
 	}
 
 	error_code ec;
-	bfs::file_status fs = bfs::status(dirpath);
+	bfs::file_status fs = bfs::status(dirpath, ec);
 
 	if(error_except_not_found(ec)) {
 		ERR_FS << "Failed to retrieve file status for " << dirpath.string() << ": " << ec.message() << '\n';
@@ -741,7 +741,7 @@ std::string normalize_path(const std::string& fpath, bool normalize_separators, 
 	}
 
 	error_code ec;
-	bfs::path p = resolve_dot_entries ? bfs::canonical(fpath, ec) : bfs::absolute(fpath);
+	bfs::path p = resolve_dot_entries ? bfs::canonical(fpath, ec) : bfs::absolute(fpath, ec);
 
 	if(ec) {
 		return "";
