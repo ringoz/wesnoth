@@ -47,7 +47,10 @@ void quit_confirmation::quit_to_title()
 
 void quit_confirmation::quit_to_desktop()
 {
-	if(quit()) { throw CVideo::quit(); }
+#ifndef NANOHEX
+	if(quit())
+#endif
+		{ throw CVideo::quit(); }
 }
 
 bool quit_confirmation::show_prompt(const std::string& message)
