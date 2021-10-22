@@ -41,6 +41,11 @@ endif()
 if(OPENSSL_FOUND)
 	add_definitions(-DHAVE_OPENSSL)
 	set(common-external-libs ${common-external-libs} OpenSSL::Crypto OpenSSL::SSL)
+	if(WIN32)
+	  set(common-external-libs ${common-external-libs} crypt32.lib)
+  elseif(APPLE)
+	  set(common-external-libs ${common-external-libs} ${SECURITY_LIBRARY})
+  endif()
 endif()
 
 set(game-external-libs
