@@ -61,7 +61,12 @@ static std::ostream& output()
 	protected:
     std::streamsize xsputn(const char_type* s, std::streamsize n) override 
     {
-			osOutputDebugString(s);
+			buf.append(s, n);
+			if (s[n - 1] == '\n')
+			{
+				osOutputDebugString(buf.c_str());
+				buf.clear();
+			}
 			return n;
     };
 	} result;
