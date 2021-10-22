@@ -33,9 +33,6 @@
 #include "gui/widgets/stacked_widget.hpp"
 #include "gui/widgets/text_box_base.hpp"
 #include "gui/widgets/window.hpp"
-#ifdef _WIN32
-#include "log_windows.hpp"
-#endif
 
 #include <functional>
 
@@ -57,9 +54,6 @@ game_version::game_version()
 	, copy_wid_stem_("copy_")
 	, browse_wid_stem_("browse_")
 	, path_map_()
-#ifdef _WIN32
-	, log_path_(lg::log_file_path())
-#endif
 	, deps_()
 	, opts_(game_config::optional_features_table())
 	, report_()
@@ -72,9 +66,6 @@ game_version::game_version()
 	path_map_["saves"] = filesystem::get_saves_dir();
 	path_map_["addons"] = filesystem::get_addons_dir();
 	path_map_["cache"] = filesystem::get_cache_dir();
-#ifdef _WIN32
-	path_map_["logs"] = filesystem::get_logs_dir();
-#endif
 
 	for(unsigned k = 0; k < game_config::LIB_COUNT; ++k) {
 		const game_config::LIBRARY_ID lib = game_config::LIBRARY_ID(k);
@@ -155,20 +146,9 @@ void game_version::pre_show(window& window)
 		}
 	}
 
-#ifndef _WIN32
 	for(const auto& wid : {"win32_paths", "label_logs", "path_logs", "copy_logs", "browse_logs"}) {
 		find_widget<widget>(&window, wid, false).set_visible(widget::visibility::invisible);
 	}
-#else
-	button& stderr_button
-			= find_widget<button>(&window, "open_stderr", false);
-	connect_signal_mouse_left_click(
-			stderr_button,
-			std::bind(&game_version::browse_directory_callback,
-						this,
-						log_path_));
-	stderr_button.set_active(!log_path_.empty());
-#endif
 
 	//
 	// Build info tab.

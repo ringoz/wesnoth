@@ -23,10 +23,6 @@
 #include "utils/ranges.hpp"
 #include "video.hpp"
 
-#if defined _WIN32
-#include "desktop/windows_tray_notification.hpp"
-#endif
-
 #include <algorithm>
 #include <cassert>
 #include <deque>
