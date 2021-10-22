@@ -1065,9 +1065,6 @@ std::string get_program_invocation(const std::string& program_name)
 #ifdef DEBUG
 										+ "-debug"
 #endif
-#ifdef _WIN32
-										+ ".exe"
-#endif
 	);
 
 	return (bfs::path(game_config::wesnoth_program_dir) / real_program_name).string();

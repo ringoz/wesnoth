@@ -258,13 +258,11 @@ version_table_manager::version_table_manager()
 	// OpenSSL/libcrypto
 	//
 
-#ifndef __APPLE__
 #ifdef HAVE_OPENSSL
 	compiled[LIB_CRYPTO] = format_openssl_version(OPENSSL_VERSION_NUMBER);
 	linked[LIB_CRYPTO] = format_openssl_version(SSLeay());
 	names[LIB_CRYPTO] = "OpenSSL/libcrypto";
 #endif // HAVE_OPENSSL
-#endif
 
 	//
 	// Features table.
@@ -274,27 +272,6 @@ version_table_manager::version_table_manager()
 #ifdef HAVE_HISTORY
 	features.back().enabled = true;
 #endif
-
-#ifdef _X11
-
-	features.emplace_back(N_("feature^D-Bus notifications back end"));
-#ifdef HAVE_LIBDBUS
-	features.back().enabled = true;
-#endif
-
-#endif /* _X11 */
-
-#ifdef _WIN32
-	// Always compiled in.
-	features.emplace_back(N_("feature^Win32 notifications back end"));
-	features.back().enabled = true;
-#endif
-
-#ifdef __APPLE__
-    // Always compiled in.
-	features.emplace_back(N_("feature^Cocoa notifications back end"));
-	features.back().enabled = true;
-#endif /* __APPLE__ */
 }
 
 const std::string empty_version = "";

@@ -70,14 +70,6 @@
 #include "gui/widgets/debug.hpp"
 #endif
 
-// For wesnothd launch code.
-#ifdef _WIN32
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
-#endif // _WIN32
-
 struct incorrect_map_format_error;
 
 static lg::log_domain log_config("config");
@@ -821,27 +813,6 @@ void game_launcher::start_wesnothd()
 		// copy file if it isn't created yet
 		filesystem::write_file(config, filesystem::read_file(filesystem::get_wml_location("lan_server.cfg")));
 	}
-
-#ifndef _WIN32
-	std::string command = "\"" + wesnothd_program +"\" -c \"" + config + "\" -d -t 2 -T 5";
-#else
-	// start wesnoth as background job
-	std::string command = "cmd /C start \"wesnoth server\" /B \"" + wesnothd_program + "\" -c \"" + config + "\" -t 2 -T 5";
-	// Make sure wesnothd's console output is visible on the console window by
-	// disabling SDL's stdio redirection code for this and future child
-	// processes. No need to bother cleaning this up because it's only
-	// meaningful to SDL applications during pre-main initialization.
-	SetEnvironmentVariableA("SDL_STDIO_REDIRECT", "0");
-#endif
-	LOG_GENERAL << "Starting wesnothd: "<< command << "\n";
-#ifndef NANOHEX
-	if (std::system(command.c_str()) == 0) {
-		// Give server a moment to start up
-		SDL_Delay(50);
-		return;
-	}
-#endif
-	preferences::set_mp_server_program_name("");
 
 	// Couldn't start server so throw error
 	WRN_GENERAL << "Failed to run server start script" << std::endl;

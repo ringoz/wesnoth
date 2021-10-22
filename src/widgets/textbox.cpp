@@ -550,12 +550,7 @@ bool textbox::handle_key_down(const SDL_Event &event)
 	if(!(c == SDLK_UP || c == SDLK_DOWN || c == SDLK_LEFT || c == SDLK_RIGHT ||
 			c == SDLK_DELETE || c == SDLK_BACKSPACE || c == SDLK_END || c == SDLK_HOME ||
 			c == SDLK_PAGEUP || c == SDLK_PAGEDOWN)) {
-		if((event.key.keysym.mod & copypaste_modifier)
-				//on windows SDL fires for AltGr lctrl+ralt (needed to access @ etc on certain keyboards)
-#ifdef _WIN32
-				&& !(event.key.keysym.mod & KMOD_ALT)
-#endif
-		) {
+		if((event.key.keysym.mod & copypaste_modifier)) {
 			switch(c) {
 			case SDLK_v: // paste
 			{

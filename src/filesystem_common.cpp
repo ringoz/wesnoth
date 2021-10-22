@@ -163,10 +163,6 @@ std::string get_addons_dir()
 
 std::string get_intl_dir()
 {
-#ifdef _WIN32
-	return game_config::path + "/" LOCALEDIR;
-#else
-
 #ifdef USE_INTERNAL_DATA
 	return get_cwd() + "/" LOCALEDIR;
 #endif
@@ -178,7 +174,6 @@ std::string get_intl_dir()
 #endif
 
 	return res;
-#endif
 }
 
 std::string get_screenshot_dir()

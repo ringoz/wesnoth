@@ -35,11 +35,6 @@
 #include "video.hpp" // non_interactive()
 #include "game_config_view.hpp"
 
-#include <sys/stat.h> // for setting the permissions of the preferences file
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
 static lg::log_domain log_config("config");
 #define ERR_CFG LOG_STREAM(err , log_config)
 
@@ -134,10 +129,6 @@ void prefs_event_handler::handle_window_event(const SDL_Event& event)
 
 void write_preferences()
 {
-#ifndef _WIN32
-    bool prefs_file_existed = access(filesystem::get_prefs_file().c_str(), F_OK) == 0;
-#endif
-
 	try {
 		filesystem::scoped_ostream prefs_file = filesystem::ostream_file(filesystem::get_prefs_file());
 		write(*prefs_file, prefs);
@@ -146,16 +137,6 @@ void write_preferences()
 	}
 
 	preferences::save_credentials();
-
-#ifndef _WIN32
-    if(!prefs_file_existed) {
-
-        if(chmod(filesystem::get_prefs_file().c_str(), 0600) == -1) {
-			ERR_FS << "error setting permissions of preferences file '" << filesystem::get_prefs_file() << "'" << std::endl;
-        }
-
-    }
-#endif
 }
 
 void set(const std::string &key, bool value)
@@ -544,25 +525,13 @@ void _set_grid(bool ison)
 
 std::size_t sound_buffer_size()
 {
-	// Sounds don't sound good on Windows unless the buffer size is 4k,
-	// but this seems to cause crashes on other systems...
-	#ifdef _WIN32
-		const std::size_t buf_size = 4096;
-	#else
-		const std::size_t buf_size = 1024;
-	#endif
-
+	const std::size_t buf_size = 4096;
 	return prefs["sound_buffer_size"].to_int(buf_size);
 }
 
 void save_sound_buffer_size(const std::size_t size)
 {
-	#ifdef _WIN32
-		const char* buf_size = "4096";
-	#else
-		const char* buf_size = "1024";
-	#endif
-
+	const char* buf_size = "4096";
 	const std::string new_size = lexical_cast_default<std::string>(size, buf_size);
 	if (get("sound_buffer_size") == new_size)
 		return;

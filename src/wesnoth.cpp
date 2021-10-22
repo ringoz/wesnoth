@@ -98,24 +98,6 @@
 
 //#define NO_CATCH_AT_GAME_END
 
-#ifdef _WIN32
-
-#ifdef INADDR_ANY
-#undef INADDR_ANY
-#endif
-
-#ifdef INADDR_BROADCAST
-#undef INADDR_BROADCAST
-#endif
-
-#ifdef INADDR_NONE
-#undef INADDR_NONE
-#endif
-
-#include <windows.h>
-
-#endif // _WIN32
-
 #ifdef DEBUG_WINDOW_LAYOUT_GRAPHS
 #include "gui/widgets/debug.hpp"
 #endif

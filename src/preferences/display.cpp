@@ -150,11 +150,7 @@ bool show_theme_dialog()
 
 void show_wesnothd_server_search()
 {
-#ifndef _WIN32
 	const std::string filename = "wesnothd";
-#else // _WIN32
-	const std::string filename = "wesnothd.exe";
-#endif
 
 	const std::string& old_path = filesystem::directory_name(preferences::get_mp_server_program_name());
 	std::string path =

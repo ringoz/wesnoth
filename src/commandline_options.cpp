@@ -62,11 +62,7 @@ bad_commandline_tuple::bad_commandline_tuple(const std::string& str,
 }
 
 
-#ifdef _WIN32
-#define IMPLY_WCONSOLE " Implies --wconsole."
-#else
 #define IMPLY_WCONSOLE
-#endif // _WIN32
 
 
 commandline_options::commandline_options(const std::vector<std::string>& args)
@@ -222,11 +218,6 @@ commandline_options::commandline_options(const std::vector<std::string>& args)
 		("validcache", "assumes that the cache is valid. (dangerous)")
 		("version,v", "prints the game's version number and exits.")
 		("with-replay", "replays the file loaded with the --load option.")
-#ifdef _WIN32
-		("wconsole", "attaches a console window on startup (Windows only). Implied by any option that prints something and exits.")
-		("wnoconsole", "don't attach a console window on startup (Windows only). Overrides options that imply --wconsole.")
-		("wnoredirect", "disables standard redirection of logging to a file (Windows only), allowing the output to be piped to another command")
-#endif // _WIN32
 		;
 
 	po::options_description campaign_opts("Campaign options");

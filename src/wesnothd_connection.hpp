@@ -15,22 +15,6 @@
 
 #pragma once
 
-#ifdef _WIN32
-
-#ifdef INADDR_ANY
-#undef INADDR_ANY
-#endif
-
-#ifdef INADDR_BROADCAST
-#undef INADDR_BROADCAST
-#endif
-
-#ifdef INADDR_NONE
-#undef INADDR_NONE
-#endif
-
-#endif // endif _WIN32
-
 #include "configr_assign.hpp"
 #include "wesnothd_connection_error.hpp"
 

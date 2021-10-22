@@ -507,11 +507,9 @@ void sdl_event_handler::handle_event(const SDL_Event& event)
 			}
 			break;
 
-#if(defined(_X11) && !defined(__APPLE__)) || defined(_WIN32)
 		case SDL_SYSWMEVENT:
 			/* DO NOTHING */
 			break;
-#endif
 
 		// Silently ignored events.
 		case SDL_KEYUP:
