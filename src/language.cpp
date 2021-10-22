@@ -32,10 +32,6 @@ extern "C" int _putenv(const char*);
 #endif
 #endif
 
-#ifdef __APPLE__
-#include <cerrno>
-#endif
-
 #define DBG_G LOG_STREAM(debug, lg::general())
 #define LOG_G LOG_STREAM(info, lg::general())
 #define WRN_G LOG_STREAM(warn, lg::general())
@@ -220,11 +216,6 @@ static void wesnoth_setlocale(int category, const std::string& slocale,
 	//that's why code like if (category == LC_MESSAGES) is outcommented here.
 #ifndef _WIN32
 	unsetenv ("LANGUAGE"); // void so no return value to check
-#endif
-#ifdef __APPLE__
-	//if (category == LC_MESSAGES && setenv("LANG", locale.c_str(), 1) == -1) {
-	//	ERR_G << "setenv LANG failed: " << strerror(errno);
-	//}
 #endif
 
 #ifdef _WIN32

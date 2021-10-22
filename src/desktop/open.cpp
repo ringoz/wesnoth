@@ -18,7 +18,10 @@
 #include "log.hpp"
 #include "serialization/unicode.hpp"
 
-#if defined(_X11) || defined(__APPLE__)
+#ifdef NANOHEX
+#include <OS/os.h>
+
+#elif defined(_X11) || defined(__APPLE__)
 
 #include <thread>
 
@@ -48,7 +51,9 @@ bool open_object([[maybe_unused]] const std::string& path_or_url)
 {
 	LOG_DU << "open_object(): requested object: " << path_or_url << '\n';
 
-#if defined(_X11) || defined(__APPLE__)
+#ifdef NANOHEX
+	return 0 == osSystem(path_or_url.c_str());
+#elif defined(_X11) || defined(__APPLE__)
 
 #ifndef __APPLE__
 	LOG_DU << "open_object(): on X11, will use xdg-open\n";

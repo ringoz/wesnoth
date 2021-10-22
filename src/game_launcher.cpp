@@ -834,11 +834,13 @@ void game_launcher::start_wesnothd()
 	SetEnvironmentVariableA("SDL_STDIO_REDIRECT", "0");
 #endif
 	LOG_GENERAL << "Starting wesnothd: "<< command << "\n";
+#ifndef NANOHEX
 	if (std::system(command.c_str()) == 0) {
 		// Give server a moment to start up
 		SDL_Delay(50);
 		return;
 	}
+#endif
 	preferences::set_mp_server_program_name("");
 
 	// Couldn't start server so throw error

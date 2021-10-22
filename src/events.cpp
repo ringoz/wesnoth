@@ -701,33 +701,6 @@ void pump()
 			continue; // do not do further handling here
 		}
 
-#ifndef __APPLE__
-		case SDL_KEYDOWN: {
-			if(event.key.keysym.sym == SDLK_F4 &&
-				(event.key.keysym.mod == KMOD_RALT || event.key.keysym.mod == KMOD_LALT)
-			) {
-				quit_confirmation::quit_to_desktop();
-				continue; // this event is already handled
-			}
-			break;
-		}
-#endif
-
-#if defined(_X11) && !defined(__APPLE__)
-		case SDL_SYSWMEVENT: {
-			// clipboard support for X11
-			desktop::clipboard::handle_system_event(event);
-			break;
-		}
-#endif
-
-#if defined _WIN32
-		case SDL_SYSWMEVENT: {
-			windows_tray_notification::handle_system_event(event);
-			break;
-		}
-#endif
-
 		case SDL_QUIT: {
 			quit_confirmation::quit_to_desktop();
 			continue; // this event is already handled.

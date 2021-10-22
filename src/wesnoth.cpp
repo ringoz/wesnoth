@@ -59,16 +59,6 @@
 #include "widgets/button.hpp" // for button
 #include "wml_exception.hpp"  // for wml_exception
 
-#ifdef _WIN32
-#include "log_windows.hpp"
-
-#include <float.h>
-#endif // _WIN32
-
-#ifndef _MSC_VER
-#include <fenv.h>
-#endif // _MSC_VER
-
 #include <SDL2/SDL.h> // for SDL_Init, SDL_INIT_TIMER
 
 #include <boost/iostreams/categories.hpp>   // for input, output
@@ -612,12 +602,6 @@ static int process_command_args(const commandline_options& cmdline_opts)
  */
 static void init_locale()
 {
-#if defined _WIN32 || defined __APPLE__
-	setlocale(LC_ALL, "English");
-#else
-	std::setlocale(LC_ALL, "C");
-#endif
-
 	const std::string& intl_dir = filesystem::get_intl_dir();
 
 	translation::bind_textdomain(PACKAGE, intl_dir.c_str(), "UTF-8");
@@ -663,78 +647,6 @@ static void handle_lua_script_args(game_launcher* game, commandline_options& /*c
 	}
 }
 
-#ifdef _MSC_VER
-static void check_fpu()
-{
-	uint32_t f_control;
-
-	if(_controlfp_s(&f_control, 0, 0) == 0) {
-		uint32_t unused;
-		uint32_t rounding_mode = f_control & _MCW_RC;
-
-		if(rounding_mode != _RC_NEAR) {
-			std::cerr << "Floating point rounding mode is currently '"
-				<< ((rounding_mode == _RC_CHOP)
-					? "chop"
-					: (rounding_mode == _RC_UP)
-						? "up"
-						: (rounding_mode == _RC_DOWN)
-							? "down"
-							: (rounding_mode == _RC_NEAR) ? "near" : "unknown")
-				<< "' setting to 'near'\n";
-
-			if(_controlfp_s(&unused, _RC_NEAR, _MCW_RC)) {
-				std::cerr << "failed to set floating point rounding type to 'near'\n";
-			}
-		}
-
-#ifndef _M_AMD64
-		uint32_t precision_mode = f_control & _MCW_PC;
-		if(precision_mode != _PC_53) {
-			std::cerr << "Floating point precision mode is currently '"
-				<< ((precision_mode == _PC_53)
-					? "double"
-					: (precision_mode == _PC_24)
-						? "single"
-						: (precision_mode == _PC_64) ? "double extended" : "unknown")
-				<< "' setting to 'double'\n";
-
-			if(_controlfp_s(&unused, _PC_53, _MCW_PC)) {
-				std::cerr << "failed to set floating point precision type to 'double'\n";
-			}
-		}
-#endif
-
-	} else {
-		std::cerr << "_controlfp_s failed.\n";
-	}
-}
-#else
-static void check_fpu()
-{
-	switch(fegetround()) {
-	case FE_TONEAREST:
-		break;
-	case FE_DOWNWARD:
-		std::cerr << "Floating point precision mode is currently 'downward'";
-		goto reset_fpu;
-	case FE_TOWARDZERO:
-		std::cerr << "Floating point precision mode is currently 'toward-zero'";
-		goto reset_fpu;
-	case FE_UPWARD:
-		std::cerr << "Floating point precision mode is currently 'upward'";
-		goto reset_fpu;
-	default:
-		std::cerr << "Floating point precision mode is currently 'unknown'";
-		goto reset_fpu;
-	reset_fpu:
-		std::cerr << "setting to 'nearest'";
-		fesetround(FE_TONEAREST);
-		break;
-	}
-}
-#endif
-
 /**
  * Setups the game environment and enters
  * the titlescreen or game loops.
@@ -748,13 +660,6 @@ static int do_gameloop(const std::vector<std::string>& args)
 
 	int finished = process_command_args(cmdline_opts);
 	if(finished != -1) {
-#ifdef _WIN32
-		if(lg::using_own_console()) {
-			std::cerr << "Press enter to continue..." << std::endl;
-			std::cin.get();
-		}
-#endif
-
 		return finished;
 	}
 
@@ -788,13 +693,8 @@ static int do_gameloop(const std::vector<std::string>& args)
 		return 1;
 	}
 
-	check_fpu();
 	const cursor::manager cursor_manager;
 	cursor::set(cursor::WAIT);
-
-#if(defined(_X11) && !defined(__APPLE__)) || defined(_WIN32)
-	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
 
 	gui2::init();
 	const gui2::event::manager gui_event_manager;
@@ -968,32 +868,9 @@ static int do_gameloop(const std::vector<std::string>& args)
 	}
 }
 
-#ifndef _WIN32
-static void wesnoth_terminate_handler(int)
-{
-	exit(0);
-}
-#endif
-
-#ifdef _WIN32
-#define error_exit(res)                                                                                                \
-	do {                                                                                                               \
-		if(lg::using_own_console()) {                                                                                  \
-			std::cerr << "Press enter to continue..." << std::endl;                                                    \
-			std::cin.get();                                                                                            \
-		}                                                                                                              \
-		return res;                                                                                                    \
-	} while(false)
-#else
 #define error_exit(res) return res
-#endif
 
-#ifdef __APPLE__
-extern "C" int wesnoth_main(int argc, char** argv);
-int wesnoth_main(int argc, char** argv)
-#else
 int main(int argc, char** argv)
-#endif
 {
 	auto args = read_argv(argc, argv);
 	assert(!args.empty());
@@ -1007,81 +884,10 @@ int main(int argc, char** argv)
 		}
 	}
 
-#ifdef _WIN32
-	bool log_redirect = true, native_console_implied = false;
-	// This is optional<bool> instead of tribool because value_or() is exactly the required semantic
-	std::optional<bool> native_console_force;
-	// Some switches force a Windows console to be attached to the process even
-	// if Wesnoth is an IMAGE_SUBSYSTEM_WINDOWS_GUI executable because they
-	// turn it into a CLI application. Also, --wconsole in particular attaches
-	// a console to a regular GUI game session.
-	//
-	// It's up to commandline_options later to handle these switches (other
-	// --wconsole) later and emit any applicable console output, but right here
-	// we need a rudimentary check for the switches in question to set up the
-	// console before proceeding any further.
-	for(const auto& arg : args) {
-		// Switches that don't take arguments
-		static const std::set<std::string> wincon_switches = {
-			"--wconsole", "-h", "--help", "-v", "--version", "-R", "--report", "--logdomains",
-			"--data-path", "--userdata-path", "--userconfig-path",
-		};
-
-		// Switches that take arguments, the switch may have the argument past
-		// the first = character, or in a subsequent argv entry which we don't
-		// care about -- we just want to see if the switch is there.
-		static const std::set<std::string> wincon_arg_switches = {
-			"-D", "--diff", "-p", "--preprocess", "-P", "--patch", "--render-image",
-			 "--screenshot", "-V", "--validate", "--validate-schema",
-		};
-
-		auto switch_matches_arg = [&arg](const std::string& sw) {
-			const auto pos = arg.find('=');
-			return pos == std::string::npos ? arg == sw : arg.substr(0, pos) == sw;
-		};
-
-		if(wincon_switches.find(arg) != wincon_switches.end() ||
-			std::find_if(wincon_arg_switches.begin(), wincon_arg_switches.end(), switch_matches_arg) != wincon_arg_switches.end()) {
-			native_console_implied = true;
-		}
-
-		if(arg == "--wnoconsole") {
-			native_console_force = false;
-		} else if(arg == "--wconsole") {
-			native_console_force = true;
-		} else if(arg == "--wnoredirect") {
-			log_redirect = false;
-		}
-	}
-
-	if(native_console_force.value_or(native_console_implied)) {
-		lg::enable_native_console_output();
-	}
-	lg::early_log_file_setup(!log_redirect);
-#endif
-
 	if(SDL_Init(SDL_INIT_TIMER) < 0) {
 		fprintf(stderr, "Couldn't initialize SDL: %s\n", SDL_GetError());
 		return (1);
 	}
-
-#ifndef _WIN32
-	struct sigaction terminate_handler;
-	terminate_handler.sa_handler = wesnoth_terminate_handler;
-	terminate_handler.sa_flags = 0;
-
-	sigemptyset(&terminate_handler.sa_mask);
-	sigaction(SIGTERM, &terminate_handler, nullptr);
-	sigaction(SIGINT, &terminate_handler, nullptr);
-#endif
-
-	// Mac's touchpad generates touch events too.
-	// Ignore them until Macs have a touchscreen: https://forums.libsdl.org/viewtopic.php?p=45758
-#if defined(__APPLE__) && !defined(__IPHONEOS__)
-	SDL_EventState(SDL_FINGERMOTION, SDL_DISABLE);
-	SDL_EventState(SDL_FINGERDOWN, SDL_DISABLE);
-	SDL_EventState(SDL_FINGERUP, SDL_DISABLE);
-#endif
 
 	// declare this here so that it will always be at the front of the event queue.
 	events::event_context global_context;

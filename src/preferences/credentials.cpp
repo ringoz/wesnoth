@@ -25,11 +25,7 @@
 #include <algorithm>
 #include <memory>
 
-#ifndef __APPLE__
 #include <openssl/rc4.h>
-#else
-#include <CommonCrypto/CommonCryptor.h>
-#endif
 
 #ifdef _WIN32
 #include <boost/range/iterator_range.hpp>
@@ -272,7 +268,6 @@ secure_buffer build_key(const std::string& server, const std::string& login)
 static secure_buffer rc4_crypt(const secure_buffer& text, const secure_buffer& key)
 {
 	secure_buffer result(text.size(), '\0');
-#ifndef __APPLE__
 	RC4_KEY cipher_key;
 	RC4_set_key(&cipher_key, key.size(), key.data());
 	const std::size_t block_size = key.size();
@@ -285,23 +280,6 @@ static secure_buffer rc4_crypt(const secure_buffer& text, const secure_buffer& k
 		std::size_t i = blocks * block_size;
 		RC4(&cipher_key, extra, text.data() + i, result.data() + i);
 	}
-#else
-	size_t outWritten = 0;
-	CCCryptorStatus ccStatus = CCCrypt(kCCDecrypt,
-		kCCAlgorithmRC4,
-		kCCOptionPKCS7Padding,
-		key.data(),
-		key.size(),
-		nullptr,
-		text.data(),
-		text.size(),
-		result.data(),
-		result.size(),
-		&outWritten);
-
-	assert(ccStatus == kCCSuccess);
-	assert(outWritten == text.size());
-#endif
 	return result;
 }
 

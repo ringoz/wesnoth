@@ -26,11 +26,6 @@
 #include "sdl/utils.hpp"
 #include "sdl/window.hpp"
 
-#ifdef TARGET_OS_OSX
-#include "desktop/apple_video.hpp"
-#include "game_version.hpp"
-#endif
-
 #include <cassert>
 #include <vector>
 
@@ -210,9 +205,7 @@ void CVideo::init_window()
 
 	// Add any more default flags here
 	window_flags |= SDL_WINDOW_RESIZABLE;
-#ifdef __APPLE__
 	window_flags |= SDL_WINDOW_ALLOW_HIGHDPI;
-#endif
 
 	if(preferences::fullscreen()) {
 		window_flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;

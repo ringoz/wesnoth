@@ -14,7 +14,6 @@ endif()
 
 ## some includes ##
 include_directories(SYSTEM ${GETTEXT_INCLUDE_DIR})
-include_directories(SYSTEM ${LIBDBUS_INCLUDE_DIRS})
 include_directories(SYSTEM ${SDL2_INCLUDE_DIR})
 include_directories(SYSTEM ${SDL2IMAGE_INCLUDE_DIR})
 include_directories(SYSTEM ${SDL2MIXER_INCLUDE_DIR})
@@ -29,18 +28,7 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
 # needed to have the generated config.h used, too
 include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
-link_directories(
-	${LIBDBUS_LIBRARY_DIRS}
-)
-
 set(common-external-libs ${ICU_DATA_LIBRARY} ${ICU_I18N_LIBRARY} ${ICU_UC_LIBRARY} ${SDL2_LIBRARY})
-if(WIN32)
-	set(common-external-libs ${common-external-libs} shlwapi.lib winmm.lib crypt32.lib)
-elseif(MINGW)
-	set(common-external-libs ${common-external-libs} wsock32 ws2_32 shlwapi winmm)
-elseif(APPLE)
-	set(common-external-libs ${common-external-libs} ${IOKIT_LIBRARY} ${SECURITY_LIBRARY})
-endif()
 
 if(ZLIB_FOUND)
 	add_definitions(-DHAVE_ZLIB)
@@ -60,7 +48,6 @@ set(game-external-libs
 	${SDL2_IMAGE_LIBRARY}
 	${SDL2_MIXER_LIBRARY}
 	${SDL2_TTF_LIBRARY}
-	${LIBDBUS_LIBRARIES}
 )
 
 if(HISTORY_FOUND)
@@ -83,15 +70,10 @@ set_source_files_properties(${lua_sources} PROPERTIES LANGUAGE CXX)
 file(GLOB wesnoth_lua_config wesnoth_lua_config.h)
 set_source_files_properties(${lua_sources} PROPERTIES OBJECT_DEPENDS ${wesnoth_lua_config})
 
-if(WIN32)
-	set(wesnoth_core_sources ${wesnoth_core_sources} log_windows.cpp)
-	set(wesnoth_game_sources ${wesnoth_game_sources} desktop/windows_tray_notification.cpp desktop/windows_battery_info.cpp)
-	
-	set_source_files_properties(${lua_sources} PROPERTIES COMPILE_FLAGS "/FI\"${wesnoth_lua_config}\"")
-	# silence an implicit bitshift conversion warning
-	set_property(SOURCE SOURCE ${lua_sources} APPEND_STRING PROPERTY COMPILE_FLAGS " /wd4334")
+if(MSVC)
+	set_source_files_properties(${lua_sources} PROPERTIES COMPILE_FLAGS "/FI\"${wesnoth_lua_config}\" /wd4334")
 else()
-	set_source_files_properties(${lua_sources} PROPERTIES COMPILE_FLAGS "-include \"${wesnoth_lua_config}\" -Wno-old-style-cast -Wno-useless-cast -Wno-stringop-overflow")
+	set_source_files_properties(${lua_sources} PROPERTIES COMPILE_FLAGS "-include \"${wesnoth_lua_config}\" -Wno-shift-overflow")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -99,22 +81,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	set_property(SOURCE SOURCE ${lua_sources} APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-parentheses-equality")
 	# silence a Clang specific warning when compiling the lua code
 	set_property(SOURCE SOURCE ${lua_sources}	APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-string-plus-int")
-endif()
-
-# On apple only
-if(APPLE)
-	set(wesnoth_game_sources
-		${wesnoth_game_sources}
-		desktop/apple_battery_info.mm
-		desktop/apple_notification.mm
-		desktop/apple_version.mm
-		desktop/apple_video.mm
-	)
-endif()
-
-# For libdbus (essentially just for linux), this file needs to be linked, as its header is included #ifdef HAVE_LIBDBUS
-if(LIBDBUS_FOUND)
-	set(wesnoth_game_sources ${wesnoth_game_sources} desktop/dbus_features.cpp)
 endif()
 
 # Depending on the flag create a real file or an empty dummy.
@@ -202,7 +168,8 @@ if(ENABLE_GAME)
 		add_executable(wesnoth WIN32 wesnoth.cpp ../packaging/windows/wesnoth.rc)
 		target_link_options(wesnoth PRIVATE /WX /WHOLEARCHIVE:$<TARGET_LINKER_FILE:wesnoth-widgets>)
 	elseif(APPLE)
-		add_executable(wesnoth wesnoth.cpp macosx/SDLMain.mm)
+		add_executable(wesnoth wesnoth.cpp)
+    set_target_properties(wesnoth PROPERTIES MACOSX_BUNDLE TRUE MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/macos/wesnoth.plist)
 	else()
 		add_executable(wesnoth wesnoth.cpp)
 	endif()
