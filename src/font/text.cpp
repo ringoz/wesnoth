@@ -150,11 +150,11 @@ static const font::p_font &pango_font(const PangoLayout::face &font, font::famil
 	if(it == cache.end()) {
 		const char* filename;
 #ifdef NANOHEX
-		if(key.size <= 13)
+		if(key.size <= 12)
 			filename = (key.style & font::pango_text::STYLE_BOLD) ? "assets/fonts/t0-12b-uni.psf" : "assets/fonts/t0-12-uni.psf";
-		else if(key.size <= 15)
+		else if(key.size <= 14)
 			filename = (key.style & font::pango_text::STYLE_BOLD) ? "assets/fonts/t0-14b-uni.psf" : "assets/fonts/t0-14-uni.psf";
-		else if(key.size <= 17)
+		else if(key.size <= 16)
 			filename = (key.style & font::pango_text::STYLE_BOLD) ? "assets/fonts/t0-16b-uni.psf" : (key.style & font::pango_text::STYLE_ITALIC) ? "assets/fonts/t0-16i-uni.psf" : "assets/fonts/t0-16-uni.psf";
 		else if(key.size <= 20)
 			filename = (key.style & font::pango_text::STYLE_BOLD) ? "assets/fonts/t0-18b-uni.psf" : (key.style & font::pango_text::STYLE_ITALIC) ? "assets/fonts/t0-18i-uni.psf" : "assets/fonts/t0-18-uni.psf";
