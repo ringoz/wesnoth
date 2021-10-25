@@ -149,6 +149,18 @@ static const font::p_font &pango_font(const PangoLayout::face &font, font::famil
 	auto it = cache.find(reinterpret_cast<uint32_t&>(key));
 	if(it == cache.end()) {
 		const char* filename;
+#ifdef NANOHEX
+		if(key.size <= 13)
+			filename = (key.style & font::pango_text::STYLE_BOLD) ? "assets/fonts/t0-12b-uni.psf" : "assets/fonts/t0-12-uni.psf";
+		else if(key.size <= 15)
+			filename = (key.style & font::pango_text::STYLE_BOLD) ? "assets/fonts/t0-14b-uni.psf" : "assets/fonts/t0-14-uni.psf";
+		else if(key.size <= 17)
+			filename = (key.style & font::pango_text::STYLE_BOLD) ? "assets/fonts/t0-16b-uni.psf" : (key.style & font::pango_text::STYLE_ITALIC) ? "assets/fonts/t0-16i-uni.psf" : "assets/fonts/t0-16-uni.psf";
+		else if(key.size <= 20)
+			filename = (key.style & font::pango_text::STYLE_BOLD) ? "assets/fonts/t0-18b-uni.psf" : (key.style & font::pango_text::STYLE_ITALIC) ? "assets/fonts/t0-18i-uni.psf" : "assets/fonts/t0-18-uni.psf";
+		else
+			filename = (key.style & font::pango_text::STYLE_BOLD) ? "assets/fonts/t0-22b-uni.psf" : "assets/fonts/t0-22-uni.psf";
+#else
 		switch(key.family) {
 		case font::family_class::FONT_MONOSPACE:
 			if(key.style & font::pango_text::STYLE_BOLD)
@@ -187,6 +199,7 @@ static const font::p_font &pango_font(const PangoLayout::face &font, font::famil
 			else
 				filename = "fonts/Lato-Medium.ttf";
 		}
+#endif
 		it = cache.emplace(std::piecewise_construct, std::forward_as_tuple(reinterpret_cast<uint32_t&>(key)),
 					 std::forward_as_tuple(filename, (unsigned)key.size, (font::pango_text::FONT_STYLE)key.style)).first;
 	}
