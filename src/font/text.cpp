@@ -582,6 +582,15 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 
 		size.x = 0;
 		size.y += size.height + layout.spacing;
+
+		if(maximum_width != -1 && ellipse_mode_ != PANGO_ELLIPSIZE_NONE) {
+			if(maximum_height_ > 0 && size.y >= maximum_height_)
+				return true;
+
+			if(maximum_height_ < 0 && size.y >= -maximum_height_ * (size.height + layout.spacing))
+				return true;
+		}
+		return false;
 	};
 
 	static const auto nextword = [](const char *text)
@@ -603,15 +612,18 @@ PangoRectangle pango_text::calculate_size(PangoLayout& layout) const
 				continue;
 
 			if(maximum_width != -1 && size.x + size.width > maximum_width)
-				linebreak();
+				if (linebreak())
+					goto done;
 
 			layout.words.push_back({span, text, reinterpret_cast<const SDL_Rect&>(size)});
 			size.x += size.width;
 
 			for(auto n = text.find('\n'); n != std::string_view::npos; n = text.find('\n', n + 1))
-				linebreak();
+				if (linebreak())
+					goto done;
 		}
 	}
+done:
 	linebreak();
 
 	SDL_Rect bounds = {};
