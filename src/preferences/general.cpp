@@ -525,13 +525,13 @@ void _set_grid(bool ison)
 
 std::size_t sound_buffer_size()
 {
-	const std::size_t buf_size = 4096;
+	const std::size_t buf_size = 512;
 	return prefs["sound_buffer_size"].to_int(buf_size);
 }
 
 void save_sound_buffer_size(const std::size_t size)
 {
-	const char* buf_size = "4096";
+	const char* buf_size = "512";
 	const std::string new_size = lexical_cast_default<std::string>(size, buf_size);
 	if (get("sound_buffer_size") == new_size)
 		return;
@@ -891,7 +891,7 @@ const config &get_alias()
 
 unsigned int sample_rate()
 {
-	return prefs["sample_rate"].to_int(44100);
+	return prefs["sample_rate"].to_int(24000);
 }
 
 void save_sample_rate(const unsigned int rate)
