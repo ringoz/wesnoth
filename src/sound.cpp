@@ -503,6 +503,7 @@ void close_sound()
 		stop_sound();
 		sound_cache.clear();
 		stop_music();
+		music_cache.clear();
 		mix_ok = false;
 
 		int numtimesopened = Mix_QuerySpec(&frequency, &format, &channels);
