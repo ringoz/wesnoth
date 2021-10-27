@@ -931,6 +931,9 @@ std::string get_binary_file_location(const std::string& type, const std::string&
 		bfs::path bpath(bp);
 		bpath /= filename;
 
+		if(bpath.extension() == ".wav" || bpath.extension() == ".ogg")
+			bpath.replace_extension(".aac");
+
 		DBG_FS << "  checking '" << bp << "'\n";
 
 		if(file_exists(bpath)) {
