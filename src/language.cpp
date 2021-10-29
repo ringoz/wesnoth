@@ -22,15 +22,9 @@
 #include "serialization/preprocessor.hpp"
 #include "game_config_manager.hpp"
 
+#include <SDL2/SDL_locale.h>
 #include <stdexcept>
 #include <clocale>
-
-#ifdef _WIN32
-#include <windows.h>
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-extern "C" int _putenv(const char*);
-#endif
-#endif
 
 #define DBG_G LOG_STREAM(debug, lg::general())
 #define LOG_G LOG_STREAM(info, lg::general())
@@ -141,87 +135,10 @@ void set_min_translation_percent(int percent) {
 	min_translation_percent = percent;
 }
 
-#ifdef _WIN32
-// Simplified translation table from unix locale symbols to win32 locale strings
-static const std::map<std::string, std::string> win32_locales_map = {
-	{ "af", "Afrikaans" },
-	{ "ang", "C" },
-	{ "ar", "Arabic" },
-	{ "bg", "Bulgarian" },
-	{ "ca", "Catalan" },
-	{ "cs", "Czech" },
-	{ "da", "Danish" },
-	{ "de", "German" },
-	{ "el", "Greek" },
-	{ "en", "English" },
-	{ "eo", "C" },
-	{ "es", "Spanish" },
-	{ "et", "Estonian" },
-	{ "eu", "Basque" },
-	{ "fi", "Finnish" },
-	{ "fr", "French" },
-	{ "fur", "C" },
-	{ "ga", "Irish_Ireland" }, // Yes, "Irish" alone does not work
-	{ "gl", "Galician" },
-	{ "he", "Hebrew" },
-	{ "hr", "Croatian" },
-	{ "hu", "Hungarian" },
-	{ "id", "Indonesian" },
-	{ "is", "Icelandic" },
-	{ "it", "Italian" },
-	{ "ja", "Japanese" },
-	{ "ko", "Korean" },
-	{ "la", "C" },
-	{ "lt", "Lithuanian" },
-	{ "lv", "Latvian" },
-	{ "mk", "Macedonian" },
-	{ "mr", "C" },
-	{ "nb", "Norwegian" },
-	{ "nl", "Dutch" },
-	{ "pl", "Polish" },
-	{ "pt", "Portuguese" },
-	{ "racv", "C" },
-	{ "ro", "Romanian" },
-	{ "ru", "Russian" },
-	{ "sk", "Slovak" },
-	{ "sl", "Slovenian" },
-	{ "sr", "Serbian" },
-	{ "sv", "Swedish" },
-	{ "tl", "Filipino" },
-	{ "tr", "Turkish" },
-	{ "uk", "Ukrainian" },
-	{ "vi", "Vietnamese" },
-	{ "zh", "Chinese" },
-};
-
-static const std::string& posix_locale_to_win32(const std::string& posix)
-{
-	auto it = win32_locales_map.find(posix);
-	return it != win32_locales_map.end() ? it->second : posix;
-}
-
-#endif
-
 static void wesnoth_setlocale(int category, const std::string& slocale,
 	std::vector<std::string> const *alternates)
 {
 	std::string locale = slocale;
-	// FIXME: ideally we should check LANGUAGE and on first invocation
-	// use that value, so someone with es would get the game in Spanish
-	// instead of en_US the first time round
-	// LANGUAGE overrides other settings, so for now just get rid of it
-	// FIXME: add configure check for unsetenv
-
-	//category is never LC_MESSAGES since that case was moved to gettext.cpp to remove the dependency to libintl.h in this file
-	//that's why code like if (category == LC_MESSAGES) is outcommented here.
-#ifndef _WIN32
-	unsetenv ("LANGUAGE"); // void so no return value to check
-#endif
-
-#ifdef _WIN32
-	std::string lang_code{locale, 0, locale.find_first_of("_@.")};
-	locale = posix_locale_to_win32(lang_code);
-#endif
 
 	char *res = nullptr;
 	std::vector<std::string>::const_iterator i;
@@ -261,14 +178,6 @@ static void wesnoth_setlocale(int category, const std::string& slocale,
 	if (category == LC_TIME) {
 		time_locale_correct() = false;
 	}
-
-#ifndef _WIN32
-		//if(category == LC_MESSAGES) {
-		//	WRN_G << "Setting LANGUAGE to '" << slocale << "'." << std::endl;
-		//	setenv("LANGUAGE", slocale.c_str(), 1);
-		//	std::setlocale(LC_MESSAGES, "");
-		//}
-#endif
 
 	done:
 	DBG_G << "Numeric locale: " << std::setlocale(LC_NUMERIC, nullptr) << '\n';
@@ -319,8 +228,6 @@ const language_def& get_language() { return current_language; }
 
 const language_def& get_locale()
 {
-	//TODO: Add in support for querying the locale on Windows
-
 	assert(!known_languages.empty());
 
 	const std::string& prefs_locale = preferences::language();
@@ -335,21 +242,19 @@ const language_def& get_locale()
 		return known_languages[0];
 	}
 
-#if 0
-	const char* const locale = getenv("LANG");
-	#ifdef _WIN32
-	    return posix_locale_to_win32(locale);
-	#endif
-	if(locale != nullptr && strlen(locale) >= 2) {
-		//we can't pass pointers into the string to the std::string
-		//constructor because some STL implementations don't support
-		//it (*cough* MSVC++6)
-		std::string res(2,'z');
-		res[0] = tolower(locale[0]);
-		res[1] = tolower(locale[1]);
-		return res;
+	std::unique_ptr<SDL_Locale, decltype(&SDL_free)> preferred(SDL_GetPreferredLocales(), SDL_free);
+	for(SDL_Locale* locale = preferred.get(); locale->language != nullptr; ++locale) {
+		std::string localename = locale->language;
+		if(locale->country) {
+			localename += "_";
+			localename += locale->country;
+		}
+		translation::set_language(localename, nullptr);
+		for(language_list::const_iterator i = known_languages.begin(); i != known_languages.end(); ++i) {
+			if(localename == i->localename)
+				return *i;
+		}
 	}
-#endif
 
 	LOG_G << "locale could not be determined; defaulting to system locale\n";
 	return known_languages[0];
