@@ -165,26 +165,17 @@ addon_info_translation addon_info_translation::invalid = {false, "", ""};
 
 addon_info_translation addon_info::translated_info() const
 {
-	const boost::locale::info& locale_info = translation::get_effective_locale_info();
-
-	std::string lang_name_short = locale_info.language();
-	std::string lang_name_long = lang_name_short;
-	if(!locale_info.country().empty()) {
-		lang_name_long += '_';
-		lang_name_long += locale_info.country();
-	}
-	if(!locale_info.variant().empty()) {
-		lang_name_long += '@';
-		lang_name_long += locale_info.variant();
-		lang_name_short += '@';
-		lang_name_short += locale_info.variant();
-	}
+	const std::string& lang_name_long = translation::get_effective_locale_info();
 
 	auto info = info_translations.find(lang_name_long);
 	if(info != info_translations.end()) {
 		return info->second;
 	}
 
+	if (lang_name_long.find_first_of("_") == std::string::npos)
+		return addon_info_translation::invalid;
+
+	std::string lang_name_short = lang_name_long.substr(0, lang_name_long.find_first_of("_"));
 	info = info_translations.find(lang_name_short);
 	if(info != info_translations.end()) {
 		return info->second;

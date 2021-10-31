@@ -38,7 +38,6 @@
 #include <string>
 #include <vector>
 #include <ctime>
-#include <boost/locale/info.hpp>
 
 #ifndef GETTEXT_DOMAIN
 # define GETTEXT_DOMAIN PACKAGE
@@ -86,7 +85,7 @@ namespace translation
 	 * unlike language_def.localename in language.hpp, where the "System
 	 * default language" is represented by an empty string.
 	 */
-	const boost::locale::info& get_effective_locale_info();
+	const std::string& get_effective_locale_info();
 }
 
 //#define _(String) translation::dsgettext(GETTEXT_DOMAIN,String)

@@ -161,8 +161,13 @@ std::string get_addons_dir()
 	return get_dir(dir_path);
 }
 
+extern "C" const char *osGetLocale();
 std::string get_intl_dir()
 {
+#ifdef NANOHEX
+  return osGetLocale();
+#endif
+
 #ifdef USE_INTERNAL_DATA
 	return get_cwd() + "/" LOCALEDIR;
 #endif

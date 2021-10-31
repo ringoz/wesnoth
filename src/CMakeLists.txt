@@ -30,6 +30,11 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
 set(common-external-libs ${ICU_DATA_LIBRARY} ${ICU_I18N_LIBRARY} ${ICU_UC_LIBRARY} ${SDL2_LIBRARY})
 
+if(Intl_FOUND)
+  include_directories(SYSTEM ${Intl_INCLUDE_DIR})
+	set(common-external-libs ${common-external-libs} ${Intl_LIBRARIES})
+endif()
+
 if(ZLIB_FOUND)
 	add_definitions(-DHAVE_ZLIB)
 endif()
@@ -115,7 +120,6 @@ add_library(wesnoth-common STATIC ${wesnoth_core_sources})
 target_link_libraries(wesnoth-common
 	$<TARGET_NAME_IF_EXISTS:Boost::bimap>
 	$<TARGET_NAME_IF_EXISTS:Boost::iostreams>
-	$<TARGET_NAME_IF_EXISTS:Boost::locale>
 	$<TARGET_NAME_IF_EXISTS:Boost::multi_array>
 	$<TARGET_NAME_IF_EXISTS:Boost::random>
 )
@@ -132,7 +136,6 @@ if(ENABLE_GAME OR ENABLE_TESTS)
 		$<TARGET_NAME_IF_EXISTS:Boost::dynamic_bitset>
 		$<TARGET_NAME_IF_EXISTS:Boost::format>
 		$<TARGET_NAME_IF_EXISTS:Boost::iostreams>
-		$<TARGET_NAME_IF_EXISTS:Boost::locale>
 		$<TARGET_NAME_IF_EXISTS:Boost::logic>
 		$<TARGET_NAME_IF_EXISTS:Boost::math>
 		$<TARGET_NAME_IF_EXISTS:Boost::multi_array>
@@ -151,7 +154,6 @@ if(ENABLE_GAME OR ENABLE_TESTS)
 		$<TARGET_NAME_IF_EXISTS:Boost::bimap>
 		$<TARGET_NAME_IF_EXISTS:Boost::circular_buffer>
 		$<TARGET_NAME_IF_EXISTS:Boost::dynamic_bitset>
-		$<TARGET_NAME_IF_EXISTS:Boost::locale>
 		$<TARGET_NAME_IF_EXISTS:Boost::logic>
 		$<TARGET_NAME_IF_EXISTS:Boost::multi_array>
 		$<TARGET_NAME_IF_EXISTS:Boost::preprocessor>
@@ -220,7 +222,6 @@ if(ENABLE_TESTS)
 		Boost::thread
 		Boost::random
 		Boost::coroutine
-		Boost::locale
 		Boost::unit_test_framework
 	)
 	if(ENABLE_DISPLAY_REVISION)
@@ -292,7 +293,6 @@ if(ENABLE_CAMPAIGN_SERVER)
 		Boost::thread
 		Boost::random
 		Boost::coroutine
-		Boost::locale
 	)
 	if(WIN32)
 		target_link_options(campaignd PRIVATE /WX)

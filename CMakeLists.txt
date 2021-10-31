@@ -70,7 +70,7 @@ if(APPLE)
 	find_library(SECURITY_LIBRARY Security REQUIRED)
 endif()
 
-find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS iostreams program_options regex system thread random coroutine locale)
+find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS iostreams program_options regex system thread random coroutine)
 find_package(ICU REQUIRED COMPONENTS data i18n uc)
 
 # no, gettext executables are not required when NLS is deactivated
@@ -482,6 +482,7 @@ if(ENABLE_GAME OR ENABLE_TESTS)
 	find_package(SDL2_mixer 2.0.0 REQUIRED)
 	find_package(SDL2_ttf 2.0.12 REQUIRED)
 	find_package(PkgConfig REQUIRED)
+	find_package(Intl REQUIRED)
 endif()
 
 if(ENABLE_TESTS)
