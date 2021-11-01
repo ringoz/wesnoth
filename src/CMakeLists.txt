@@ -159,34 +159,36 @@ if(ENABLE_GAME OR ENABLE_TESTS)
 		$<TARGET_NAME_IF_EXISTS:Boost::preprocessor>
 		$<TARGET_NAME_IF_EXISTS:Boost::range>
 	)
-
-	if(APPLE)
-		set(WIDGETS_LIB -Wl,-force_load wesnoth-widgets)
-	elseif(NOT WIN32)
-		set(WIDGETS_LIB -Wl,--whole-archive wesnoth-widgets -Wl,--no-whole-archive)
-	else()
-		# handled by /WHOLEARCHIVE below
-		set(WIDGETS_LIB wesnoth-widgets)
-	endif()
 endif()
 
 if(ENABLE_GAME)
+	add_library(wesnoth-game INTERFACE)
+	target_link_libraries(wesnoth-game INTERFACE
+		wesnoth-common
+		wesnoth-widgets
+		wesnoth-client
+		${game-external-libs}
+	)
+
+	if(APPLE)
+		target_link_options(wesnoth-game INTERFACE LINKER:-force_load,wesnoth-widgets)
+	elseif(NOT WIN32)
+		target_link_options(wesnoth-game INTERFACE LINKER:--whole-archive,wesnoth-widgets,--no-whole-archive)
+	else()
+		target_link_options(wesnoth-game INTERFACE /WHOLEARCHIVE:$<TARGET_LINKER_FILE:wesnoth-widgets>)
+	endif()
+
 	if(WIN32)
 		add_executable(wesnoth WIN32 wesnoth.cpp ../packaging/windows/wesnoth.rc)
-		target_link_options(wesnoth PRIVATE /WX /WHOLEARCHIVE:$<TARGET_LINKER_FILE:wesnoth-widgets>)
 	elseif(APPLE)
-		add_executable(wesnoth wesnoth.cpp)
-    set_target_properties(wesnoth PROPERTIES MACOSX_BUNDLE TRUE MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/macos/wesnoth.plist)
+		add_executable(wesnoth MACOSX_BUNDLE wesnoth.cpp)
+    set_target_properties(wesnoth PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/macos/wesnoth.plist)
 	else()
 		add_executable(wesnoth wesnoth.cpp)
 	endif()
 
 	target_link_libraries(wesnoth
-		wesnoth-common
-		${WIDGETS_LIB}
-		wesnoth-client
-		wesnoth-common
-		${game-external-libs}
+		wesnoth-game
 	)
 	if(ENABLE_DISPLAY_REVISION)
 		add_dependencies(wesnoth wesnoth-revision)
@@ -211,7 +213,7 @@ if(ENABLE_TESTS)
 
 	target_link_libraries(boost_unit_tests
 		wesnoth-common
-		${WIDGETS_LIB}
+		wesnoth-widgets
 		wesnoth-client
 		wesnoth-common
 		${game-external-libs}
