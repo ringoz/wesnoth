@@ -169,7 +169,7 @@ if(ENABLE_GAME)
 	)
 
 	if(APPLE)
-		target_link_options(wesnoth-game INTERFACE LINKER:-force_load,wesnoth-widgets)
+		target_link_options(wesnoth-game INTERFACE LINKER:-force_load,$<TARGET_LINKER_FILE:wesnoth-widgets>)
 	elseif(NOT WIN32)
 		target_link_options(wesnoth-game INTERFACE LINKER:--whole-archive,$<TARGET_LINKER_FILE:wesnoth-widgets>,--no-whole-archive)
 	else()
