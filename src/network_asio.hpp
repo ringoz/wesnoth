@@ -17,7 +17,9 @@
 
 #include "exceptions.hpp"
 #include "utils/variant.hpp"
+#include <boost/system/error_code.hpp>
 
+#ifdef HAVE_ASIO
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/streambuf.hpp>
@@ -170,3 +172,33 @@ private:
 	std::size_t bytes_read_;
 };
 }
+#else
+class config;
+namespace network_asio
+{
+struct error : public game::error
+{
+	error(const boost::system::error_code& error)
+		: game::error(error.message())
+	{
+	}
+};
+
+/** A class that represents a TCP/IP connection. */
+class connection
+{
+public:
+	connection(const std::string& host, const std::string& service) {}
+	void transfer(const config& request, config& response) {}
+	std::size_t poll() { return 0; }
+	void run() {}
+	void cancel() {}
+	bool done() const { return false; }
+	bool using_tls() const { return false; }
+	std::size_t bytes_to_write() const { return 0; }
+	std::size_t bytes_written() const { return 0; }
+	std::size_t bytes_to_read() const { return 0; }
+	std::size_t bytes_read() const { return 0; }
+};
+}
+#endif // HAVE_ASIO

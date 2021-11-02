@@ -130,7 +130,6 @@ if(ENABLE_GAME OR ENABLE_TESTS)
 		$<TARGET_NAME_IF_EXISTS:Boost::algorithm>
 		$<TARGET_NAME_IF_EXISTS:Boost::align>
 		$<TARGET_NAME_IF_EXISTS:Boost::any>
-		$<TARGET_NAME_IF_EXISTS:Boost::asio>
 		$<TARGET_NAME_IF_EXISTS:Boost::bimap>
 		$<TARGET_NAME_IF_EXISTS:Boost::circular_buffer>
 		$<TARGET_NAME_IF_EXISTS:Boost::dynamic_bitset>
@@ -150,7 +149,6 @@ if(ENABLE_GAME OR ENABLE_TESTS)
 	target_link_libraries(wesnoth-widgets
 		$<TARGET_NAME_IF_EXISTS:Boost::align>
 		$<TARGET_NAME_IF_EXISTS:Boost::any>
-		$<TARGET_NAME_IF_EXISTS:Boost::asio>
 		$<TARGET_NAME_IF_EXISTS:Boost::bimap>
 		$<TARGET_NAME_IF_EXISTS:Boost::circular_buffer>
 		$<TARGET_NAME_IF_EXISTS:Boost::dynamic_bitset>
@@ -223,7 +221,6 @@ if(ENABLE_TESTS)
 		Boost::system
 		Boost::thread
 		Boost::random
-		Boost::coroutine
 		Boost::unit_test_framework
 	)
 	if(ENABLE_DISPLAY_REVISION)
@@ -256,7 +253,6 @@ if(ENABLE_SERVER)
 		${MYSQL_LIBS}
 		$<TARGET_NAME_IF_EXISTS:Boost::asio>
 		$<TARGET_NAME_IF_EXISTS:Boost::scope_exit>
-		$<TARGET_NAME_IF_EXISTS:Boost::coroutine>
 	)
 	if(WIN32)
 		target_link_options(wesnothd PRIVATE /WX)
@@ -294,7 +290,6 @@ if(ENABLE_CAMPAIGN_SERVER)
 		Boost::system
 		Boost::thread
 		Boost::random
-		Boost::coroutine
 	)
 	if(WIN32)
 		target_link_options(campaignd PRIVATE /WX)

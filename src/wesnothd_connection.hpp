@@ -18,6 +18,7 @@
 #include "configr_assign.hpp"
 #include "wesnothd_connection_error.hpp"
 
+#ifdef HAVE_ASIO
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/streambuf.hpp>
@@ -196,3 +197,16 @@ private:
 	std::size_t bytes_to_read_;
 	std::size_t bytes_read_;
 };
+#else
+/** A class that represents a TCP/IP connection to the wesnothd server. */
+class wesnothd_connection
+{
+public:
+	wesnothd_connection(const std::string& host, const std::string& service) {}
+	void send_data(const configr_of& request) {}
+	bool receive_data(config& result) { return false; }
+	bool wait_and_receive_data(config& data) { return false; }
+	void wait_for_handshake() {}
+	bool using_tls() const { return false; }
+};
+#endif // HAVE_ASIO

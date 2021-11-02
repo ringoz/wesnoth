@@ -13,6 +13,7 @@
 	See the COPYING file for more details.
 */
 
+#ifdef HAVE_ASIO
 #define BOOST_ASIO_NO_DEPRECATED
 
 #include "network_asio.hpp"
@@ -334,3 +335,4 @@ void connection::handle_read(const boost::system::error_code& ec, std::size_t by
 	read_gz(response, is);
 }
 }
+#endif // HAVE_ASIO

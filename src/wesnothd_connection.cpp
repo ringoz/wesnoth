@@ -13,6 +13,7 @@
 	See the COPYING file for more details.
 */
 
+#ifdef HAVE_ASIO
 #define BOOST_ASIO_NO_DEPRECATED
 
 #include "wesnothd_connection.hpp"
@@ -532,3 +533,4 @@ bool wesnothd_connection::wait_and_receive_data(config& data)
 
 	return receive_data(data);
 };
+#endif // HAVE_ASIO
