@@ -23,18 +23,9 @@
 
 #include "cursor.hpp"
 #include "gettext.hpp"
-#include "gui/auxiliary/find_widget.hpp"
-#include "gui/core/timer.hpp"
-#include "gui/widgets/drawing.hpp"
-#include "gui/widgets/label.hpp"
-#include "gui/widgets/settings.hpp"
-#include "gui/widgets/window.hpp"
 #include "log.hpp"
-#include "preferences/general.hpp"
-#include "video.hpp"
 
-#include <cstdlib>
-#include <functional>
+#include <map>
 
 static lg::log_domain log_loadscreen("loadscreen");
 #define ERR_LS LOG_STREAM(err, log_loadscreen)
@@ -68,134 +59,25 @@ static const std::map<loading_stage, std::string> stage_names {
 
 namespace gui2::dialogs
 {
-REGISTER_DIALOG(loading_screen)
-
-loading_screen* loading_screen::singleton_ = nullptr;
-
-loading_screen::loading_screen(std::function<void()> f)
-	: load_func_(f)
-	, worker_result_()
-	, cursor_setter_()
-	, progress_stage_label_(nullptr)
-	, animation_(nullptr)
-	, animation_start_()
-	, current_stage_(loading_stage::none)
-	, visible_stages_()
-	, current_visible_stage_()
-{
-	for(const auto& [stage, description] : stage_names) {
-		visible_stages_[stage] = t_string(description, "wesnoth-lib") + "...";
-	}
-
-	current_visible_stage_ = visible_stages_.end();
-	singleton_ = this;
-}
-
-void loading_screen::pre_show(window& window)
-{
-	window.set_enter_disabled(true);
-	window.set_escape_disabled(true);
-
-	cursor_setter_.reset(new cursor::setter(cursor::WAIT));
-
-	if(load_func_) {
-		// Run the load function in its own thread.
-		try {
-			worker_result_ = std::async(std::launch::async, load_func_);
-		} catch(const std::system_error& e) {
-			ERR_LS << "Failed to create worker thread: " << e.what() << "\n";
-			throw;
-		}
-	}
-
-	progress_stage_label_ = find_widget<label>(&window, "status", false, true);
-	animation_ = find_widget<drawing>(&window, "animation", false, true);
-
-	// Add a draw callback to handle the animation, et al.
-	window.connect_signal<event::DRAW>(
-		std::bind(&loading_screen::draw_callback, this), event::dispatcher::front_child);
-}
-
-void loading_screen::post_show(window& /*window*/)
-{
-	cursor_setter_.reset();
-}
 
 void loading_screen::progress(loading_stage stage)
 {
-	if(singleton_ && stage != loading_stage::none) {
-		singleton_->current_stage_.store(stage, std::memory_order_release);
-	}
-}
-
-void loading_screen::process(events::pump_info&)
-{
-	using namespace std::chrono_literals;
-
-	if(!load_func_ || worker_result_.wait_for(0ms) == std::future_status::ready) {
-		// The worker returns void, so this is only to handle any exceptions thrown from the worker.
-		// worker_result_.valid() will return false after.
-		if(worker_result_.valid()) {
-			worker_result_.get();
-		}
-
-		get_window()->close();
-	}
-}
-
-void loading_screen::draw_callback()
-{
-	loading_stage stage = current_stage_.load(std::memory_order_acquire);
-
-	if(stage != loading_stage::none && (current_visible_stage_ == visible_stages_.end() || stage != current_visible_stage_->first)) {
-		auto iter = visible_stages_.find(stage);
-		if(iter == visible_stages_.end()) {
+	if(stage != loading_stage::none) {
+		auto iter = stage_names.find(stage);
+		if(iter == stage_names.end()) {
 			WRN_LS << "Stage missing description." << std::endl;
 			return;
 		}
 
-		current_visible_stage_ = iter;
-		progress_stage_label_->set_label(iter->second);
-	}
-
-	using namespace std::chrono;
-	const auto now = steady_clock::now();
-
-	// We only need to set the start time once;
-	if(!animation_start_.has_value()) {
-		animation_start_ = now;
-	}
-
-	animation_->get_drawing_canvas().set_variable("time", wfl::variant(duration_cast<milliseconds>(now - *animation_start_).count()));
-	animation_->set_is_dirty(true);
+		std::cerr << iter->second << "..." << std::endl;
+	}	
 }
 
-loading_screen::~loading_screen()
+void loading_screen::display(const std::function<void()> &f)
 {
-	/* If the worker thread is running, exit the application to prevent memory corruption.
-	 * TODO: this is still not optimal. The main problem is that this code assumes that this
-	 * happened because the window was closed, which is not necessarily the case (other
-	 * possibilities might be a 'dialog doesn't fit on screen' exception caused by resizing
-	 * the window).
-	 */
-	if(worker_result_.valid()) {
-#if defined(_LIBCPP_VERSION) || defined(__MINGW32__)
-		std::_Exit(0);
-#else
-		std::quick_exit(0);
-#endif
-	}
-
-	singleton_ = nullptr;
-}
-
-void loading_screen::display(std::function<void()> f)
-{
-	if(singleton_ || CVideo::get_singleton().faked()) {
-		f();
-	} else {
-		loading_screen(f).show();
-	}
+	cursor::setter cursor_setter(cursor::WAIT);
+	events::pump();
+	f();
 }
 
 } // namespace dialogs

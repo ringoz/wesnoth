@@ -14,17 +14,8 @@
 
 #pragma once
 
-#include "gui/dialogs/modal_dialog.hpp"
-
 #include "events.hpp"
 #include "tstring.hpp"
-
-#include <atomic>
-#include <chrono>
-#include <future>
-#include <map>
-#include <optional>
-#include <vector>
 
 namespace cursor
 {
@@ -66,53 +57,16 @@ enum class loading_stage
 
 namespace gui2
 {
-class drawing;
-class label;
-class window;
 
 namespace dialogs
 {
-class loading_screen : public modal_dialog, public events::pump_monitor
+class loading_screen
 {
 public:
-	loading_screen(std::function<void()> f);
-
-	~loading_screen();
-
-	static void display(std::function<void()> f);
-	static bool displaying() { return singleton_ != nullptr; }
+	static void display(const std::function<void()> &f);
+	static bool displaying() { return false; }
 
 	static void progress(loading_stage stage = loading_stage::none);
-
-private:
-	virtual const std::string& window_id() const override;
-
-	virtual void pre_show(window& window) override;
-
-	virtual void post_show(window& window) override;
-
-	/** Inherited from events::pump_monitor. */
-	virtual void process(events::pump_info&) override;
-
-	/** Callback to handle drawing the progress animation. */
-	void draw_callback();
-
-	static loading_screen* singleton_;
-
-	std::function<void()> load_func_;
-	std::future<void> worker_result_;
-	std::unique_ptr<cursor::setter> cursor_setter_;
-
-	label* progress_stage_label_;
-	drawing* animation_;
-
-	std::optional<decltype(std::chrono::steady_clock::now())> animation_start_;
-
-	std::atomic<loading_stage> current_stage_;
-
-	using stage_map = std::map<loading_stage, t_string>;
-	stage_map visible_stages_;
-	stage_map::const_iterator current_visible_stage_;
 };
 
 } // namespace dialogs
