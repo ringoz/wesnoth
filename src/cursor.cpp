@@ -33,131 +33,50 @@ namespace cursor
 {
 namespace
 {
-using cursor_ptr_t = std::unique_ptr<SDL_Cursor, std::function<void(SDL_Cursor*)>>;
-
-struct cursor_data
-{
-	cursor_ptr_t cursor;
-
-	boost::tribool is_color;
-
-	std::string image_bw;
-	std::string image_color;
-
-	int hot_x;
-	int hot_y;
-};
-
-//
-// Array with each available cursor type.
-// macOS needs 16x16 b&w cursors. TODO: is that still the case?
-//
-std::array<cursor_data, cursor::NUM_CURSORS> available_cursors {{
-#ifdef __APPLE__
-	{ nullptr, boost::indeterminate, "normal.png",          "normal.png",      0, 0  },
-	{ nullptr, boost::indeterminate, "wait-alt.png",        "wait.png",        0, 0  },
-	{ nullptr, boost::indeterminate, "ibeam.png",           "ibeam.png",       14, 14 },
-	{ nullptr, boost::indeterminate, "move.png",            "move.png",        0, 0  },
-	{ nullptr, boost::indeterminate, "attack.png",          "attack.png",      0, 0  },
-	{ nullptr, boost::indeterminate, "select.png",          "select.png",      0, 0  },
-	{ nullptr, boost::indeterminate, "move_drag_alt.png",   "move_drag.png",   2, 20 },
-	{ nullptr, boost::indeterminate, "attack_drag_alt.png", "attack_drag.png", 3, 22 },
-	{ nullptr, boost::indeterminate, "no_cursor.png",       "",                0, 0  }
-#else
-	{ nullptr, boost::indeterminate, "normal.png",      "normal.png",      0, 0  },
-	{ nullptr, boost::indeterminate, "wait.png",        "wait.png",        0, 0  },
-	{ nullptr, boost::indeterminate, "ibeam.png",       "ibeam.png",       14, 14 },
-	{ nullptr, boost::indeterminate, "move.png",        "move.png",        0, 0  },
-	{ nullptr, boost::indeterminate, "attack.png",      "attack.png",      0, 0  },
-	{ nullptr, boost::indeterminate, "select.png",      "select.png",      0, 0  },
-	{ nullptr, boost::indeterminate, "move_drag.png",   "move_drag.png",   2, 20 },
-	{ nullptr, boost::indeterminate, "attack_drag.png", "attack_drag.png", 3, 22 },
-	{ nullptr, boost::indeterminate, "no_cursor.png",   "",                0, 0  }
-
-#endif
-}};
 
 cursor::CURSOR_TYPE current_cursor = cursor::NORMAL;
 
 bool have_focus = true;
 
-bool use_color_cursors()
-{
-	return game_config::editor == false && preferences::use_color_cursors();
-}
-
-SDL_Cursor* create_cursor(surface surf)
-{
-	surf.make_neutral();
-	if(surf == nullptr) {
-		return nullptr;
-	}
-
-	// The width must be a multiple of 8 (SDL requirement)
-
-#ifdef __APPLE__
-	std::size_t cursor_width = 16;
-#else
-	std::size_t cursor_width = surf->w;
-	if((cursor_width % 8) != 0) {
-		cursor_width += 8 - (cursor_width % 8);
-	}
-#endif
-
-	std::vector<uint8_t> data((cursor_width * surf->h) / 8, 0);
-	std::vector<uint8_t> mask(data.size(), 0);
-
-	// See https://wiki.libsdl.org/SDL_CreateCursor for documentation
-	// on the format that data has to be in to pass to SDL_CreateCursor
-	const_surface_lock lock(surf);
-	const uint32_t* const pixels = lock.pixels();
-
-	for(int y = 0; y != surf->h; ++y) {
-		for(int x = 0; x != surf->w; ++x) {
-			if(static_cast<std::size_t>(x) < cursor_width) {
-				uint8_t r, g, b, a;
-				SDL_GetRGBA(pixels[y * surf->w + x], surf->format, &r, &g, &b, &a);
-
-				const std::size_t index = y * cursor_width + x;
-				const std::size_t shift = 7 - (index % 8);
-
-				const uint8_t trans = (a < 128 ? 0 : 1) << shift;
-				const uint8_t black = (trans == 0 || (r + g + b) / 3 > 128 ? 0 : 1) << shift;
-
-				data[index / 8] |= black;
-				mask[index / 8] |= trans;
-			}
-		}
-	}
-
-	return SDL_CreateCursor(&data[0], &mask[0], cursor_width, surf->h, 0, 0);
-}
-
 SDL_Cursor* get_cursor(cursor::CURSOR_TYPE type)
 {
-	const bool use_color = use_color_cursors();
-	cursor_data& data = available_cursors[type];
-
-	if(data.cursor == nullptr || boost::indeterminate(data.is_color) || data.is_color != use_color) {
-		static const std::string color_prefix = "cursors/";
-		static const std::string bw_prefix = "cursors-bw/";
-
-		if(use_color) {
-			const surface surf(image::get_image(color_prefix + data.image_color));
-
-			// Construct a temporary ptr to provide a new deleter.
-			data.cursor = cursor_ptr_t(SDL_CreateColorCursor(surf, data.hot_x, data.hot_y), SDL_FreeCursor);
-		} else {
-			const surface surf(image::get_image(bw_prefix + data.image_bw));
-
-			// Construct a temporary ptr to provide a new deleter.
-			data.cursor = cursor_ptr_t(create_cursor(surf), SDL_FreeCursor);
+	switch (type)
+	{
+		case NORMAL: {
+			static SDL_Cursor* cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+			return cursor;
 		}
-
-		data.is_color = use_color;
+		case WAIT: {
+			static SDL_Cursor* cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_WAIT);
+			return cursor;
+		}
+		case IBEAM: {
+			static SDL_Cursor* cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
+			return cursor;
+		}
+		case MOVE: {
+			static SDL_Cursor* cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+			return cursor;
+		}
+		case ATTACK: {
+			static SDL_Cursor* cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+			return cursor;
+		}
+		case HYPERLINK: {
+			static SDL_Cursor* cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+			return cursor;
+		}
+		case MOVE_DRAG: {
+			static SDL_Cursor* cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+			return cursor;
+		}
+		case ATTACK_DRAG: {
+			static SDL_Cursor* cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+			return cursor;
+		}
+		default:
+			return nullptr;
 	}
-
-	return data.cursor.get();
 }
 
 } // end anon namespace
