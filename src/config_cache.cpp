@@ -125,7 +125,11 @@ void config_cache::write_file(std::string file_path, const preproc_map& defines)
 void config_cache::read_file(const std::string& file_path, config& cfg)
 {
 	filesystem::scoped_istream stream = filesystem::istream_file(file_path);
+#ifdef HAVE_ZLIB
 	read_gz(cfg, *stream);
+#else
+	read(cfg, *stream);
+#endif
 }
 
 preproc_map& config_cache::make_copy_map()
@@ -151,7 +155,11 @@ void config_cache::read_configs(const std::string& file_path, config& cfg, prepr
 
 void config_cache::read_cache(const std::string& file_path, config& cfg, abstract_validator* validator)
 {
+#ifdef HAVE_ZLIB
 	static const std::string extension = ".gz";
+#else
+	static const std::string extension;
+#endif
 
 	std::stringstream defines_string;
 	defines_string << file_path;
