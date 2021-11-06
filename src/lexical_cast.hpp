@@ -279,13 +279,14 @@ struct lexical_caster<
 	{
 		DEBUG_THROW("specialized - To signed - From std::string");
 
-		try {
-			long res = std::stol(value);
+    int& _Errno_ref = errno; _Errno_ref = 0;
+    const char* _Ptr = value.c_str(); char* _Eptr;
+
+		long res = std::strtol(_Ptr, &_Eptr, 10);
+		if (_Ptr != _Eptr && _Errno_ref != ERANGE) {
 			if(std::numeric_limits<To>::lowest() <= res && std::numeric_limits<To>::max() >= res) {
 				return static_cast<To>(res);
 			}
-		} catch(const std::invalid_argument&) {
-		} catch(const std::out_of_range&) {
 		}
 
 		if(fallback) {
@@ -463,14 +464,15 @@ struct lexical_caster<
 	{
 		DEBUG_THROW("specialized - To unsigned - From std::string");
 
-		try {
-			unsigned long res = std::stoul(value);
+    int& _Errno_ref = errno; _Errno_ref = 0;
+    const char* _Ptr = value.c_str(); char* _Eptr;
+		
+		unsigned long res = std::strtoul(_Ptr, &_Eptr, 10);
+		if (_Ptr != _Eptr && _Errno_ref != ERANGE) {
 			// No need to check the lower bound, it's zero for all unsigned types.
 			if(std::numeric_limits<To>::max() >= res) {
 				return static_cast<To>(res);
 			}
-		} catch(const std::invalid_argument&) {
-		} catch(const std::out_of_range&) {
 		}
 
 		if(fallback) {
