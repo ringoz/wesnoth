@@ -991,6 +991,8 @@ std::string get_wml_location(const std::string& filename, const std::string& cur
 		}
 
 		result /= fpath;
+	} else if(fpath.parent_path() == "assets") {
+		result = fpath;
 	} else {
 		result /= bfs::path(game_config::path) / "data" / fpath;
 	}

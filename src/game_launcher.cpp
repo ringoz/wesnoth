@@ -381,11 +381,9 @@ bool game_launcher::init_lua_script()
 			jump_to_editor_ = false;
 			jump_to_campaign_.jump = false;
 
-			std::string full_plugin((std::istreambuf_iterator<char>(*sf)), std::istreambuf_iterator<char>());
-
 			plugins_manager& pm = *plugins_manager::get();
 
-			std::size_t i = pm.add_plugin(filename, full_plugin);
+			std::size_t i = pm.load_plugin(filename, filename);
 
 			for(std::size_t j = 0; j < pm.size(); ++j) {
 				std::cerr << j << ": " << pm.get_name(j) << " -- " << pm.get_detailed_status(j) << std::endl;
