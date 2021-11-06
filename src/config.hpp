@@ -34,6 +34,7 @@
 
 #include <climits>
 #include <ctime>
+#include <csetjmp>
 #include <functional>
 #include <iosfwd>
 #include <iterator>
@@ -315,24 +316,25 @@ public:
 	{
 	public:
 		friend class config;
+		std::jmp_buf env;
 
 		throw_when_child_not_found()
 		{
-			instances++;
+			instances.push_back(&env);
 		}
 
 		~throw_when_child_not_found()
 		{
-			instances--;
+			instances.pop_back();
 		}
 
-		static bool do_throw()
+		static std::jmp_buf *do_throw()
 		{
-			return instances > 0;
+			return instances.empty() ? nullptr : instances.back();
 		}
 
 	private:
-		static inline unsigned instances = 0;
+		static std::vector<std::jmp_buf *> instances;
 	};
 
 	/**
