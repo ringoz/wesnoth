@@ -93,7 +93,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	set_property(SOURCE SOURCE ${lua_sources}	APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-string-plus-int")
 endif()
 
-add_library(lua54 SHARED ${lua_sources})
+add_library(lua54 SHARED ${lua_sources} lua/utf8_crt.c)
 target_compile_definitions(lua54 PUBLIC LUA_BUILD_AS_DLL PRIVATE LUAJB_IMPL)
 
 # Depending on the flag create a real file or an empty dummy.
