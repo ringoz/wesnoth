@@ -316,7 +316,7 @@ public:
 	{
 	public:
 		friend class config;
-		std::jmp_buf env;
+		jmp_buf env;
 
 		throw_when_child_not_found()
 		{
@@ -328,13 +328,13 @@ public:
 			instances.pop_back();
 		}
 
-		static std::jmp_buf *do_throw()
+		static jmp_buf *do_throw()
 		{
 			return instances.empty() ? nullptr : instances.back();
 		}
 
 	private:
-		static std::vector<std::jmp_buf *> instances;
+		static std::vector<jmp_buf *> instances;
 	};
 
 	/**

@@ -94,10 +94,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL CMAKE_HOST_SYSTEM_NAME)
-	add_library(lua54 SHARED ${lua_sources} lua/utf8_crt.c)
+	add_library(lua54 SHARED ${lua_sources})
 	target_compile_definitions(lua54 PUBLIC LUA_BUILD_AS_DLL PRIVATE LUAJB_IMPL)
 else()
-	add_library(lua54 STATIC ${lua_sources} lua/utf8_crt.c)
+	add_library(lua54 STATIC ${lua_sources})
+endif()
+if(WIN32)
+	target_sources(lua54 PRIVATE lua/utf8_crt.c)
 endif()
 
 # Depending on the flag create a real file or an empty dummy.

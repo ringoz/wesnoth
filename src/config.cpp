@@ -110,7 +110,7 @@ struct config_implementation
 /* ** config implementation ** */
 
 config config::invalid;
-std::vector<std::jmp_buf *> config::throw_when_child_not_found::instances;
+std::vector<jmp_buf *> config::throw_when_child_not_found::instances;
 
 const char* config::diff_track_attribute = "__diff_track";
 
@@ -408,8 +408,8 @@ config& config::child(config_key_type key, int n)
 	if(i == children_.end()) {
 		DBG_CF << "The config object has no child named »" << key << "«.\n";
 
-		if(std::jmp_buf *env = throw_when_child_not_found::do_throw()) {
-			std::longjmp(*env, 1);
+		if(jmp_buf *env = throw_when_child_not_found::do_throw()) {
+			longjmp(*env, 1);
 		} else {
 			return invalid;
 		}
@@ -425,8 +425,8 @@ config& config::child(config_key_type key, int n)
 		DBG_CF << "The config object has only »" << i->second.size() << "« children named »" << key
 			   << "«; request for the index »" << n << "« cannot be honored.\n";
 
-		if(std::jmp_buf *env = throw_when_child_not_found::do_throw()) {
-			std::longjmp(*env, 1);
+		if(jmp_buf *env = throw_when_child_not_found::do_throw()) {
+			longjmp(*env, 1);
 		} else {
 			return invalid;
 		}
@@ -446,7 +446,7 @@ const config& config::child(config_key_type key, const std::string& parent) cons
 utils::optional_reference<config> config::optional_child(config_key_type key, int n)
 {
 	throw_when_child_not_found raii_helper{};
-	if (!std::setjmp(raii_helper.env))
+	if (!setjmp(raii_helper.env))
 		return child(key, n);
 
 	return std::nullopt;
@@ -455,7 +455,7 @@ utils::optional_reference<config> config::optional_child(config_key_type key, in
 utils::optional_reference<const config> config::optional_child(config_key_type key, int n) const
 {
 	throw_when_child_not_found raii_helper{};
-	if (!std::setjmp(raii_helper.env))
+	if (!setjmp(raii_helper.env))
 		return child(key, n);
 
 	return std::nullopt;
@@ -889,8 +889,8 @@ config& config::find_child(config_key_type key, const std::string& name, const s
 	if(i == children_.end()) {
 		DBG_CF << "Key »" << name << "« value »" << value << "« pair not found as child of key »" << key << "«.\n";
 
-		if(std::jmp_buf *env = throw_when_child_not_found::do_throw()) {
-			std::longjmp(*env, 1);
+		if(jmp_buf *env = throw_when_child_not_found::do_throw()) {
+			longjmp(*env, 1);
 		} else {
 			return invalid;
 		}
@@ -909,8 +909,8 @@ config& config::find_child(config_key_type key, const std::string& name, const s
 
 	DBG_CF << "Key »" << name << "« value »" << value << "« pair not found as child of key »" << key << "«.\n";
 
-	if(std::jmp_buf *env = throw_when_child_not_found::do_throw()) {
-		std::longjmp(*env, 1);
+	if(jmp_buf *env = throw_when_child_not_found::do_throw()) {
+		longjmp(*env, 1);
 	} else {
 		return invalid;
 	}
