@@ -572,9 +572,9 @@ lua_kernel_base::lua_kernel_base()
 			local path = os.getenv("LUA_DEBUG_PATH")
 			local file <close> = assert(io.open(path .. "/script/debugger.lua"))
 			package.loaded["debugger"] = assert(load(file:read "*a", "=(debugger.lua)"))(path)
-			require "debugger" : start "127.0.0.1:12306"
+			require "debugger" : start "127.0.0.1:12306" : event "wait"
 		)lua", "debugger", 0);
-		set_external_log([](const std::string &cmd) { std::cout << cmd; });
+		set_external_log([](const std::string &cmd) { std::cout << cmd << std::flush; });
 	} catch (const game::lua_error & e) {
 		log_error(e.what(), "debugger");
 	}
