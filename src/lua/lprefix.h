@@ -44,54 +44,6 @@
 #endif			/* } */
 
 #include "luai_devent.h"
-#include <stdlib.h>
-
-#if !defined(NDEBUG)
-
-#include "lauxlib.h"
-
-#if defined(lua_assert)
-#undef lua_assert
-#endif
-
-#define lua_assert(e) (void)(               \
-        (!!(e)) ||                          \
-        (                                   \
-            fprintf(stderr, "(%s:%d) %s\n", \
-                __FILE__,                   \
-                (unsigned)(__LINE__),       \
-                #e),                        \
-            fflush(stderr),                 \
-            abort(),                        \
-            0                               \
-        )                                   \
-    )
-
-#if defined(luai_apicheck)
-#undef luai_apicheck
-#endif
-
-#define luai_apicheck(l, e)                  \
-    do {                                     \
-        if (!(e)) {                          \
-            fprintf(stderr, "(%s:%d) %s\n",  \
-                __FILE__,                    \
-                (unsigned)(__LINE__),        \
-                #e);                         \
-            fflush(stderr);                  \
-            if (!lua_checkstack((l), LUA_MINSTACK)) { \
-                abort();                     \
-            }                                \
-            luaL_traceback((l), (l), 0, 0);  \
-            fprintf(stderr, "%s\n",          \
-                lua_tostring((l), -1));      \
-            fflush(stderr);                  \
-            lua_pop((l), 1);                 \
-            abort();                         \
-        }                                    \
-    } while(0)
-
-#endif
 
 #define l_randomizePivot() (*(unsigned int*)"Lua\0Lua\0")
 #define luai_makeseed(L) (getenv("LUA_SEED")? (unsigned int)atoi(getenv("LUA_SEED")): l_randomizePivot())
