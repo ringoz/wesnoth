@@ -93,6 +93,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	set_property(SOURCE SOURCE ${lua_sources}	APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-string-plus-int")
 endif()
 
+add_library(lua54 SHARED ${lua_sources})
+target_compile_definitions(lua54 PUBLIC LUA_BUILD_AS_DLL PRIVATE LUAJB_IMPL)
+
 # Depending on the flag create a real file or an empty dummy.
 #
 # Since the code is executed every build run of Wesnoth we need to make sure
@@ -125,8 +128,9 @@ target_link_libraries(wesnoth-common
 )
 
 if(ENABLE_GAME OR ENABLE_TESTS)
-	add_library(wesnoth-client STATIC ${wesnoth_sources} ${lua_sources} ${wesnoth_game_sources} ${wesnoth_sdl_sources})
+	add_library(wesnoth-client STATIC ${wesnoth_sources} ${wesnoth_game_sources} ${wesnoth_sdl_sources})
 	target_link_libraries(wesnoth-client
+		lua54
 		$<TARGET_NAME_IF_EXISTS:Boost::algorithm>
 		$<TARGET_NAME_IF_EXISTS:Boost::align>
 		$<TARGET_NAME_IF_EXISTS:Boost::any>

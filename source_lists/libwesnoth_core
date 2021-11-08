@@ -15,7 +15,6 @@ game_version.cpp
 gettext.cpp
 hash.cpp
 log.cpp
-lua_jailbreak_exception.cpp
 mt_rng.cpp
 random.cpp
 seed_rng.cpp

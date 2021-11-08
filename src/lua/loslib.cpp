@@ -15,9 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#ifdef NANOHEX
-#include <OS/os.h>
-#endif
 
 #include "lua.h"
 
@@ -147,7 +144,7 @@ static int os_execute (lua_State *L) {
   int stat;
   errno = 0;
 #ifdef NANOHEX
-  stat = osSystem(cmd);
+  stat = -1;
 #else  
   stat = system(cmd);
 #endif

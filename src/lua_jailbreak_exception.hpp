@@ -15,6 +15,16 @@
 
 #pragma once
 
+#if defined(LUA_BUILD_AS_DLL)
+#if defined(LUAJB_IMPL)
+#define LUAJB_API __declspec(dllexport)
+#else
+#define LUAJB_API __declspec(dllimport)
+#endif
+#else
+#define LUAJB_API
+#endif
+
 /**
  * Base class for exceptions that want to be thrown 'through' lua.
  *
@@ -27,24 +37,24 @@ public:
 	virtual ~lua_jailbreak_exception() noexcept {}
 
 	/** Stores a copy the current exception to be rethrown. */
-	void store() const noexcept;
+	LUAJB_API void store() const noexcept;
 
 	/**
 	 * Rethrows the stored exception.
 	 *
 	 * It is safe to call this function is no exception is stored.
 	 */
-	static void rethrow();
+	static LUAJB_API void rethrow();
 
 protected:
 
 	/** The exception to be rethrown. */
-	static lua_jailbreak_exception* jailbreak_exception;
+	static LUAJB_API lua_jailbreak_exception* get_jailbreak_exception();
 
 private:
 
 	/** Clears the current exception. */
-	static void clear() noexcept;
+	static LUAJB_API void clear() noexcept;
 
 	/**
 	 * Creates a copy of the current exception.
@@ -89,6 +99,6 @@ private:
 	                                                                 \
 	virtual void execute()                                           \
 	{                                                                \
-		type exception(dynamic_cast<type&>(*jailbreak_exception));   \
+		type exception(dynamic_cast<type&>(*get_jailbreak_exception()));   \
 		throw exception;                                             \
 	}

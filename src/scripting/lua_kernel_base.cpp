@@ -568,9 +568,15 @@ lua_kernel_base::lua_kernel_base()
 	}
 
 	try {
-		throwing_run(R"(dofile(os.getenv("LOCAL_LUA_DEBUGGER_FILEPATH")).start())", "lldebugger_init", 0);
+		throwing_run(R"lua(
+			local path = os.getenv("LUA_DEBUG_PATH")
+			local file <close> = assert(io.open(path .. "/script/debugger.lua"))
+			package.loaded["debugger"] = assert(load(file:read "*a", "=(debugger.lua)"))(path)
+			require "debugger" : start "127.0.0.1:12306"
+		)lua", "debugger", 0);
 		set_external_log([](const std::string &cmd) { std::cout << cmd; });
 	} catch (const game::lua_error & e) {
+		log_error(e.what(), "debugger");
 	}
 #else
 	// Disable functions from os which we don't want.
