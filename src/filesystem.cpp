@@ -1004,7 +1004,7 @@ std::string get_wml_location(const std::string& filename, const std::string& cur
 		DBG_FS << "  found: '" << result.string() << "'\n";
 	}
 
-	return result.string();
+	return result.generic_string();
 }
 
 static bfs::path subtract_path(const bfs::path& full, const bfs::path& prefix)

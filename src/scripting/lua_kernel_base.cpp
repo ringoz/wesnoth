@@ -555,6 +555,24 @@ lua_kernel_base::lua_kernel_base()
 		lua_pop(L, 1);  /* remove lib */
 	}
 
+#ifndef _RELEASE
+	static const luaL_Reg unsafe_libs[] {
+		{ "package", luaopen_package },
+		{ "io",      luaopen_io      },
+		{ nullptr, nullptr }
+	};
+	for (luaL_Reg const *lib = unsafe_libs; lib->func; ++lib)
+	{
+		luaL_requiref(L, lib->name, lib->func, strlen(lib->name));
+		lua_pop(L, 1);  /* remove lib */
+	}
+
+	try {
+		throwing_run(R"(dofile(os.getenv("LOCAL_LUA_DEBUGGER_FILEPATH")).start())", "lldebugger_init", 0);
+		set_external_log([](const std::string &cmd) { std::cout << cmd; });
+	} catch (const game::lua_error & e) {
+	}
+#else
 	// Disable functions from os which we don't want.
 	lua_getglobal(L, "os");
 	lua_pushnil(L);
@@ -567,6 +585,7 @@ lua_kernel_base::lua_kernel_base()
 		lua_setfield(L, -3, function);
 	}
 	lua_pop(L, 1);
+#endif
 
 	// Delete dofile and loadfile.
 	lua_pushnil(L);
@@ -718,6 +737,7 @@ lua_kernel_base::lua_kernel_base()
 	lua_setmetatable(L, -2);
 	lua_setfield(L, LUA_REGISTRYINDEX, Interp);
 
+#ifdef _RELEASE
 	// Loading ilua:
 	cmd_log_ << "Loading ilua...\n";
 
@@ -752,6 +772,7 @@ lua_kernel_base::lua_kernel_base()
 		lua_setfield(L, -3, function);
 	}
 	lua_pop(L, 1);
+#endif
 }
 
 lua_kernel_base::~lua_kernel_base()
