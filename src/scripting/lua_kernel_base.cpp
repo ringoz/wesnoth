@@ -555,7 +555,25 @@ lua_kernel_base::lua_kernel_base()
 		lua_pop(L, 1);  /* remove lib */
 	}
 
-#ifdef _RELEASE
+#ifndef _RELEASE
+	try {
+		luaL_requiref(L, "package", luaopen_package, 1);
+		lua_pop(L, 1);  /* remove lib */
+		luaL_requiref(L, "io", luaopen_io, 1);
+		lua_pop(L, 1);  /* remove lib */
+
+		throwing_run(R"lua(
+			local path = os.getenv("LUA_DEBUG_PATH")
+			local file <close> = assert(io.open(path .. "/script/debugger.lua"))
+			package.loaded["debugger"] = assert(load(file:read "*a", "=(debugger.lua)"))(path)
+			require "debugger" : start "127.0.0.1:12306" : event "wait"
+		)lua", "debugger", 0);
+		
+		set_external_log([](const std::string &cmd) { std::cout << cmd << std::flush; });
+	} catch (const game::lua_error & e) {
+		log_error(e.what(), "debugger");
+	}
+#else
 	// Disable functions from os which we don't want.
 	lua_getglobal(L, "os");
 	lua_pushnil(L);
@@ -1040,24 +1058,9 @@ int lua_kernel_base::impl_game_config_set(lua_State* L)
 void lua_kernel_base::load_package()
 {
 	lua_State *L = mState;
-	luaL_requiref(L, "package", luaopen_package, 1);
-	lua_pop(L, 1);  /* remove lib */
-
-	try {
-		luaL_requiref(L, "io", luaopen_io, 1);
-		lua_pop(L, 1);  /* remove lib */
-
-		throwing_run(R"lua(
-			local path = os.getenv("LUA_DEBUG_PATH")
-			local file <close> = assert(io.open(path .. "/script/debugger.lua"))
-			package.loaded["debugger"] = assert(load(file:read "*a", "=(debugger.lua)"))(path)
-			require "debugger" : start "127.0.0.1:12306" : event "wait"
-		)lua", "debugger", 0);
-		
-		set_external_log([](const std::string &cmd) { std::cout << cmd << std::flush; });
-	} catch (const game::lua_error & e) {
-		log_error(e.what(), "debugger");
-	}
+	lua_pushcfunction(L, luaopen_package);
+	lua_pushstring(L, "package");
+	lua_call(L, 1, 0);
 }
 
 void lua_kernel_base::load_core()
