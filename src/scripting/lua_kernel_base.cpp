@@ -555,30 +555,7 @@ lua_kernel_base::lua_kernel_base()
 		lua_pop(L, 1);  /* remove lib */
 	}
 
-#ifndef _RELEASE
-	static const luaL_Reg unsafe_libs[] {
-		{ "package", luaopen_package },
-		{ "io",      luaopen_io      },
-		{ nullptr, nullptr }
-	};
-	for (luaL_Reg const *lib = unsafe_libs; lib->func; ++lib)
-	{
-		luaL_requiref(L, lib->name, lib->func, strlen(lib->name));
-		lua_pop(L, 1);  /* remove lib */
-	}
-
-	try {
-		throwing_run(R"lua(
-			local path = os.getenv("LUA_DEBUG_PATH")
-			local file <close> = assert(io.open(path .. "/script/debugger.lua"))
-			package.loaded["debugger"] = assert(load(file:read "*a", "=(debugger.lua)"))(path)
-			require "debugger" : start "127.0.0.1:12306" : event "wait"
-		)lua", "debugger", 0);
-		set_external_log([](const std::string &cmd) { std::cout << cmd << std::flush; });
-	} catch (const game::lua_error & e) {
-		log_error(e.what(), "debugger");
-	}
-#else
+#ifdef _RELEASE
 	// Disable functions from os which we don't want.
 	lua_getglobal(L, "os");
 	lua_pushnil(L);
@@ -743,7 +720,7 @@ lua_kernel_base::lua_kernel_base()
 	lua_setmetatable(L, -2);
 	lua_setfield(L, LUA_REGISTRYINDEX, Interp);
 
-#ifdef _RELEASE
+#ifndef NANOHEX
 	// Loading ilua:
 	cmd_log_ << "Loading ilua...\n";
 
@@ -1063,9 +1040,24 @@ int lua_kernel_base::impl_game_config_set(lua_State* L)
 void lua_kernel_base::load_package()
 {
 	lua_State *L = mState;
-	lua_pushcfunction(L, luaopen_package);
-	lua_pushstring(L, "package");
-	lua_call(L, 1, 0);
+	luaL_requiref(L, "package", luaopen_package, 1);
+	lua_pop(L, 1);  /* remove lib */
+
+	try {
+		luaL_requiref(L, "io", luaopen_io, 1);
+		lua_pop(L, 1);  /* remove lib */
+
+		throwing_run(R"lua(
+			local path = os.getenv("LUA_DEBUG_PATH")
+			local file <close> = assert(io.open(path .. "/script/debugger.lua"))
+			package.loaded["debugger"] = assert(load(file:read "*a", "=(debugger.lua)"))(path)
+			require "debugger" : start "127.0.0.1:12306" : event "wait"
+		)lua", "debugger", 0);
+		
+		set_external_log([](const std::string &cmd) { std::cout << cmd << std::flush; });
+	} catch (const game::lua_error & e) {
+		log_error(e.what(), "debugger");
+	}
 }
 
 void lua_kernel_base::load_core()
