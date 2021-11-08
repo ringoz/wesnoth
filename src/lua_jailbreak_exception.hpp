@@ -16,10 +16,18 @@
 #pragma once
 
 #if defined(LUA_BUILD_AS_DLL)
+#ifdef _WIN32
 #if defined(LUAJB_IMPL)
 #define LUAJB_API __declspec(dllexport)
 #else
 #define LUAJB_API __declspec(dllimport)
+#endif
+#else
+#if defined(LUAJB_IMPL)
+#define LUAJB_API __attribute__((visibility("default")))
+#else
+#define LUAJB_API 
+#endif
 #endif
 #else
 #define LUAJB_API

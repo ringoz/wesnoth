@@ -278,11 +278,19 @@
 */
 #if defined(LUA_BUILD_AS_DLL)	/* { */
 
+#ifdef _WIN32
 #if defined(LUA_CORE) || defined(LUA_LIB)	/* { */
 #define LUA_API extern "C" __declspec(dllexport)
 #else						/* }{ */
 #define LUA_API extern "C" __declspec(dllimport)
 #endif						/* } */
+#else
+#if defined(LUA_CORE) || defined(LUA_LIB)	/* { */
+#define LUA_API extern "C" __attribute__((visibility("default")))
+#else						/* }{ */
+#define LUA_API extern "C" 
+#endif						/* } */
+#endif
 
 #else				/* }{ */
 
