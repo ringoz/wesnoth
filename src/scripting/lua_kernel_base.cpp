@@ -565,8 +565,10 @@ lua_kernel_base::lua_kernel_base()
 		throwing_run(R"lua(
 			local path = os.getenv("LUA_DEBUG_PATH")
 			local file <close> = assert(io.open(path .. "/script/debugger.lua"))
-			package.loaded["debugger"] = assert(load(file:read "*a", "=(debugger.lua)"))(path)
-			require "debugger" : start "127.0.0.1:12306" : event "wait"
+			local debugger = assert(load(file:read "*a", "=(debugger.lua)"))(path)
+			debugger:start("127.0.0.1:4278")
+			print("Waiting for Lua debugger...")
+			debugger:event("wait")
 		)lua", "debugger", 0);
 		
 		set_external_log([](const std::string &cmd) { std::cout << cmd << std::flush; });
