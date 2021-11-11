@@ -1006,6 +1006,7 @@ function ai_helper.xyoff(x, y, ori, hex)
         if (hex == 'rd') then return x+1, y-dy end
     end
 
+---@diagnostic disable-next-line: redundant-return
     return
 end
 
