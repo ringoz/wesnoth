@@ -22,7 +22,7 @@
 
 #include "seed_rng.hpp"
 
-#include <boost/nondet_random.hpp>
+#include <random>
 
 #include <sstream>
 #include <iomanip>
@@ -30,7 +30,7 @@
 namespace seed_rng {
 
 	uint32_t next_seed() {
-		static boost::random_device rnd_;
+		static std::random_device rnd_;
 		return rnd_();
 	}
 

@@ -131,7 +131,6 @@ target_link_libraries(wesnoth-common
 	$<TARGET_NAME_IF_EXISTS:Boost::bimap>
 	$<TARGET_NAME_IF_EXISTS:Boost::iostreams>
 	$<TARGET_NAME_IF_EXISTS:Boost::multi_array>
-	$<TARGET_NAME_IF_EXISTS:Boost::random>
 )
 
 if(ENABLE_GAME OR ENABLE_TESTS)
@@ -234,7 +233,6 @@ if(ENABLE_TESTS)
 		Boost::regex
 		Boost::system
 		Boost::thread
-		Boost::random
 		Boost::unit_test_framework
 	)
 	if(ENABLE_DISPLAY_REVISION)
@@ -303,7 +301,6 @@ if(ENABLE_CAMPAIGN_SERVER)
 		Boost::regex
 		Boost::system
 		Boost::thread
-		Boost::random
 	)
 	if(WIN32)
 		target_link_options(campaignd PRIVATE /WX)

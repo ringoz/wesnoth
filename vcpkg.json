@@ -21,7 +21,6 @@
       "name": "boost-locale",
       "features": [ "icu" ]
     },
-    "boost-random",
     {
       "name": "boost-regex",
       "features": [ "icu" ]
