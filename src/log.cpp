@@ -46,36 +46,13 @@ static bool precise_timestamp = false;
 static std::mutex log_mutex;
 
 static std::ostream *output_stream = nullptr;
-extern "C" void osOutputDebugString(const char *string);
 
 static std::ostream& output()
 {
 	if(output_stream) {
 		return *output_stream;
 	}
-#ifdef NANOHEX
-	static class : public std::streambuf
-	{
-		std::string buf;
-
-	protected:
-    std::streamsize xsputn(const char_type* s, std::streamsize n) override 
-    {
-			buf.append(s, n);
-			if (s[n - 1] == '\n')
-			{
-				osOutputDebugString(buf.c_str());
-				buf.clear();
-			}
-			return n;
-    };
-	} result;
-
-	static std::ostream stream(&result);
-	return stream;
-#else
 	return std::cerr;
-#endif
 }
 
 namespace lg {
