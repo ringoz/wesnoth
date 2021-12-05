@@ -991,15 +991,10 @@ std::string get_wml_location(const std::string& filename, const std::string& cur
 		}
 
 		result /= fpath;
-	} else if(fpath.parent_path() == "assets") {
-		result = fpath;
+	} else if(filename.rfind("assets/", 0) == 0) {
+		result = filename;
 	} else {
-		result /= 
-#ifdef NANOHEX
-		  (0 == filename.rfind("campaigns/", 0)) ? 
-			(bfs::path(game_config::path) / "assets" / fpath) :
-#endif			
-			(bfs::path(game_config::path) / "data" / fpath);
+		result /= bfs::path(game_config::path) / "data" / fpath;
 	}
 
 	if(result.empty() || !file_exists(result)) {

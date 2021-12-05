@@ -157,8 +157,12 @@ std::string get_saves_dir()
 
 std::string get_addons_dir()
 {
+#ifdef NANOHEX
+	return "/assets";
+#else
 	const std::string dir_path = get_user_data_dir() + "/data/add-ons";
 	return get_dir(dir_path);
+#endif
 }
 
 extern "C" const char *osGetLocale();
