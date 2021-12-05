@@ -555,7 +555,7 @@ lua_kernel_base::lua_kernel_base()
 		lua_pop(L, 1);  /* remove lib */
 	}
 
-#ifndef _RELEASE
+#if !defined(_RELEASE) && !defined(_DEBUG)
 	try {
 		luaL_requiref(L, "package", luaopen_package, 1);
 		lua_pop(L, 1);  /* remove lib */
