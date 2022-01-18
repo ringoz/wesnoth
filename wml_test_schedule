@@ -108,6 +108,8 @@
 0 modify_turns_four
 0 replace_schedule_prestart
 0 modify_unit_facing
+0 modify_unit_which_recall_list
+0 put_to_recall_and_modify
 0 event_handlers_in_events_1
 0 event_handlers_in_events_3
 0 event_handlers_in_events_2
@@ -264,6 +266,8 @@
 0 swarm_disables_upgrades_with_abilities_adjacent_fail
 0 swarm_disables_upgrades_with_abilities_adjacent_leadership
 0 swarm_disables_upgrades_with_abilities_adjacent_leadership_fail
+0 test_add_in_leadership_abilities
+0 test_sub_in_leadership_abilities
 0 unslowable_status_test
 0 unpetrifiable_status_test
 0 test_force_chance_to_hit_macro
@@ -350,6 +354,7 @@
 9 unknown_scenario_1_0
 
 # Lua API tests
+0 lua_functional
 0 lua_map_find
 0 mapgen_filter_range
 0 mapgen_filter_terrain

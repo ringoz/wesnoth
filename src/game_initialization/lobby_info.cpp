@@ -62,28 +62,28 @@ void lobby_info::refresh_installed_addons_cache()
 void do_notify(notify_mode mode, const std::string& sender, const std::string& message)
 {
 	switch(mode) {
-	case NOTIFY_WHISPER:
-	case NOTIFY_WHISPER_OTHER_WINDOW:
-	case NOTIFY_OWN_NICK:
-		mp_ui_alerts::private_message(true, sender, message);
+	case notify_mode::whisper:
+	case notify_mode::whisper_other_window:
+	case notify_mode::own_nick:
+		mp::ui_alerts::private_message(true, sender, message);
 		break;
-	case NOTIFY_FRIEND_MESSAGE:
-		mp_ui_alerts::friend_message(true, sender, message);
+	case notify_mode::friend_message:
+		mp::ui_alerts::friend_message(true, sender, message);
 		break;
-	case NOTIFY_SERVER_MESSAGE:
-		mp_ui_alerts::server_message(true, sender, message);
+	case notify_mode::server_message:
+		mp::ui_alerts::server_message(true, sender, message);
 		break;
-	case NOTIFY_LOBBY_QUIT:
-		mp_ui_alerts::player_leaves(true);
+	case notify_mode::lobby_quit:
+		mp::ui_alerts::player_leaves(true);
 		break;
-	case NOTIFY_LOBBY_JOIN:
-		mp_ui_alerts::player_joins(true);
+	case notify_mode::lobby_join:
+		mp::ui_alerts::player_joins(true);
 		break;
-	case NOTIFY_MESSAGE:
-		mp_ui_alerts::public_message(true, sender, message);
+	case notify_mode::message:
+		mp::ui_alerts::public_message(true, sender, message);
 		break;
-	case NOTIFY_GAME_CREATED:
-		mp_ui_alerts::game_created(sender, message);
+	case notify_mode::game_created:
+		mp::ui_alerts::game_created(sender, message);
 		break;
 	default:
 		break;
@@ -243,7 +243,7 @@ void lobby_info::process_userlist()
 			continue;
 		}
 
-		switch(ui.relation) {
+		switch(ui.get_relation()) {
 		case user_info::user_relation::FRIEND:
 			g->has_friends = true;
 			break;
@@ -258,25 +258,36 @@ void lobby_info::process_userlist()
 	std::stable_sort(users_.begin(), users_.end());
 }
 
-void lobby_info::sync_games_display_status()
+std::function<void()> lobby_info::begin_state_sync()
 {
-	DBG_LB << "lobby_info::sync_games_display_status";
-	DBG_LB << "games_by_id_ size: " << games_by_id_.size();
-
-	auto i = games_by_id_.begin();
-
-	while(i != games_by_id_.end()) {
-		if(i->second.display_status == game_info::disp_status::DELETED) {
-			i = games_by_id_.erase(i);
-		} else {
-			i->second.display_status = game_info::disp_status::CLEAN;
-			++i;
-		}
-	}
-
-	DBG_LB << " -> " << games_by_id_.size() << std::endl;
-
+	// First, update the list of game pointers to reflect any changes made to games_by_id_.
+	// This guarantees anything that calls games() before post cleanup has valid pointers,
+	// since there will likely have been changes to games_by_id_ caused by network traffic.
 	make_games_vector();
+
+	return [this]() {
+		DBG_LB << "lobby_info, second state sync stage";
+		DBG_LB << "games_by_id_ size: " << games_by_id_.size();
+
+		auto i = games_by_id_.begin();
+
+		while(i != games_by_id_.end()) {
+			if(i->second.display_status == game_info::disp_status::DELETED) {
+				i = games_by_id_.erase(i);
+			} else {
+				i->second.display_status = game_info::disp_status::CLEAN;
+				++i;
+			}
+		}
+
+		DBG_LB << " -> " << games_by_id_.size() << std::endl;
+
+		make_games_vector();
+
+		// Now that both containers are again in sync, update the visibility mask. We want to do
+		// this last since the filer functions are expensive.
+		apply_game_filter();
+	};
 }
 
 game_info* lobby_info::get_game_by_id(int id)
@@ -291,29 +302,6 @@ const game_info* lobby_info::get_game_by_id(int id) const
 	return i == games_by_id_.end() ? nullptr : &i->second;
 }
 
-room_info* chat_info::get_room(const std::string& name)
-{
-	try {
-		return &rooms_.at(name);
-	} catch(const std::out_of_range&) {
-		return nullptr;
-	}
-}
-
-const room_info* chat_info::get_room(const std::string& name) const
-{
-	try {
-		return &rooms_.at(name);
-	} catch(const std::out_of_range&) {
-		return nullptr;
-	}
-}
-
-bool chat_info::has_room(const std::string& name) const
-{
-	return get_room(name) != nullptr;
-}
-
 user_info* lobby_info::get_user(const std::string& name)
 {
 	for(auto& user : users_) {
@@ -323,18 +311,6 @@ user_info* lobby_info::get_user(const std::string& name)
 	}
 
 	return nullptr;
-}
-
-void chat_info::open_room(const std::string& name)
-{
-	// TODO: use try_emplace with C++20
-	rooms_.emplace(name, room_info(name));
-}
-
-void chat_info::close_room(const std::string& name)
-{
-	DBG_LB << "lobby info: closing room " << name << std::endl;
-	rooms_.erase(name);
 }
 
 void lobby_info::make_games_vector()
@@ -371,13 +347,6 @@ void lobby_info::apply_game_filter()
 
 	for(unsigned i = 0; i < games_.size(); ++i) {
 		games_visibility_[i] = is_game_visible(*games_[i]);
-	}
-}
-
-void lobby_info::update_user_statuses(int game_id)
-{
-	for(auto& user : users_) {
-		user.update_state(game_id);
 	}
 }
 

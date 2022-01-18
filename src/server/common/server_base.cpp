@@ -97,14 +97,19 @@ void server_base::start_server()
 
 void server_base::serve(boost::asio::yield_context yield, boost::asio::ip::tcp::acceptor& acceptor, boost::asio::ip::tcp::endpoint endpoint)
 {
-	if(!acceptor.is_open()) {
-		acceptor.open(endpoint.protocol());
-		acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
-		acceptor.set_option(boost::asio::ip::tcp::acceptor::keep_alive(keep_alive_));
-		if(endpoint.protocol() == boost::asio::ip::tcp::v6())
-			acceptor.set_option(boost::asio::ip::v6_only(true));
-		acceptor.bind(endpoint);
-		acceptor.listen();
+	try {
+		if(!acceptor.is_open()) {
+			acceptor.open(endpoint.protocol());
+			acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
+			acceptor.set_option(boost::asio::ip::tcp::acceptor::keep_alive(keep_alive_));
+			if(endpoint.protocol() == boost::asio::ip::tcp::v6())
+				acceptor.set_option(boost::asio::ip::v6_only(true));
+			acceptor.bind(endpoint);
+			acceptor.listen();
+		}
+	} catch(const boost::system::system_error& e) {
+		ERR_SERVER << "Exception when trying to bind port: " << e.code().message() << "\n";
+		BOOST_THROW_EXCEPTION(server_shutdown("Port binding failed", e.code()));
 	}
 
 	socket_ptr socket = std::make_shared<socket_ptr::element_type>(io_service_);
@@ -113,7 +118,7 @@ void server_base::serve(boost::asio::yield_context yield, boost::asio::ip::tcp::
 	acceptor.async_accept(socket->lowest_layer(), yield[error]);
 	if(error) {
 		ERR_SERVER << "Accept failed: " << error.message() << "\n";
-		return;
+		BOOST_THROW_EXCEPTION(server_shutdown("Accept failed", error));
 	}
 
 	if(accepting_connections()) {
@@ -129,6 +134,7 @@ void server_base::serve(boost::asio::yield_context yield, boost::asio::ip::tcp::
 		setsockopt(socket->native_handle(), SOL_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
 		setsockopt(socket->native_handle(), SOL_TCP, TCP_KEEPCNT, &cnt, sizeof(cnt));
 		setsockopt(socket->native_handle(), SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+		fcntl(socket->native_handle(), F_SETFD, FD_CLOEXEC);
 #endif
 #if defined(__APPLE__) && defined(__MACH__)
 		setsockopt(socket->native_handle(), IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
@@ -226,12 +232,20 @@ void server_base::handle_termination(const boost::system::error_code& error, int
 	exit(128 + signal_number);
 }
 
-void server_base::run() {
-	try {
-		io_service_.run();
-		LOG_SERVER << "Server has shut down because event loop is out of work\n";
-	} catch(const server_shutdown& e) {
-		LOG_SERVER << "Server has been shut down: " << e.what() << "\n";
+int server_base::run() {
+	for(;;) {
+		try {
+			io_service_.run();
+			LOG_SERVER << "Server has shut down because event loop is out of work\n";
+			return 1;
+		} catch(const server_shutdown& e) {
+			LOG_SERVER << "Server has been shut down: " << e.what() << "\n";
+			return e.ec.value();
+		} catch(const boost::system::system_error& e) {
+			ERR_SERVER << "Caught system error exception from handler: " << e.code().message() << "\n";
+		} catch(const std::exception& e) {
+			ERR_SERVER << "Caught exception from handler: " << e.what() << "\n";
+		}
 	}
 }
 
@@ -587,13 +601,32 @@ std::string server_base::hash_password(const std::string& pw, const std::string&
 		return "";
 	}
 
+	std::string password = pw;
+
+	// Apparently HTML key-characters are passed to the hashing functions of phpbb in this escaped form.
+	// I will do closer investigations on this, for now let's just hope these are all of them.
+
+	// Note: we must obviously replace '&' first, I wasted some time before I figured that out... :)
+	for(std::string::size_type pos = 0; (pos = password.find('&', pos)) != std::string::npos; ++pos) {
+		password.replace(pos, 1, "&amp;");
+	}
+	for(std::string::size_type pos = 0; (pos = password.find('\"', pos)) != std::string::npos; ++pos) {
+		password.replace(pos, 1, "&quot;");
+	}
+	for(std::string::size_type pos = 0; (pos = password.find('<', pos)) != std::string::npos; ++pos) {
+		password.replace(pos, 1, "&lt;");
+	}
+	for(std::string::size_type pos = 0; (pos = password.find('>', pos)) != std::string::npos; ++pos) {
+		password.replace(pos, 1, "&gt;");
+	}
+
 	if(utils::md5::is_valid_prefix(salt)) {
-		std::string hash = utils::md5(pw, utils::md5::get_salt(salt), utils::md5::get_iteration_count(salt)).base64_digest();
+		std::string hash = utils::md5(password, utils::md5::get_salt(salt), utils::md5::get_iteration_count(salt)).base64_digest();
 		return salt+hash;
 	} else if(utils::bcrypt::is_valid_prefix(salt)) {
 		try {
 			auto bcrypt_salt = utils::bcrypt::from_salted_salt(salt);
-			auto hash = utils::bcrypt::hash_pw(pw, bcrypt_salt);
+			auto hash = utils::bcrypt::hash_pw(password, bcrypt_salt);
 			return hash.base64_digest();
 		} catch(const utils::hash_error& err) {
 			ERR_SERVER << "bcrypt hash failed for user " << username << ": " << err.what() << std::endl;

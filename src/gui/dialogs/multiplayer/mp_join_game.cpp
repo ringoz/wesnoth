@@ -23,6 +23,7 @@
 #include "game_config.hpp"
 #include "game_config_manager.hpp"
 #include "game_initialization/mp_game_utils.hpp"
+#include "game_initialization/multiplayer.hpp"
 #include "gettext.hpp"
 #include "gui/auxiliary/find_widget.hpp"
 #include "gui/core/timer.hpp"
@@ -87,7 +88,7 @@ bool mp_join_game::fetch_game_config()
 {
 	// Ask for the next scenario data, if applicable
 	if(!first_scenario_) {
-		network_connection_.send_data(config("load_next_scenario"));
+		mp::send_to_server(config("load_next_scenario"));
 	}
 
 	bool has_scenario_and_controllers = false;
@@ -133,7 +134,19 @@ bool mp_join_game::fetch_game_config()
 		state_.classification() = game_classification(level_);
 
 		// Make sure that we have the same config as host, if possible.
-		game_config_manager::get()->load_game_config_for_game(state_.classification(), state_.get_scenario_id());
+		std::string scenario_id = state_.get_scenario_id();
+		// since add-ons are now only enabled when used, the scenario ID may still not be known
+		// so check in the MP info sent from the server for the scenario ID if that's the case
+		if(scenario_id == "") {
+			for(const auto& addon : level_.child("multiplayer").child_range("addon")) {
+				for(const auto& content : addon.child_range("content")) {
+					if(content["type"] == "scenario") {
+						scenario_id = content["id"].str();
+					}
+				}
+			}
+		}
+		game_config_manager::get()->load_game_config_for_game(state_.classification(), scenario_id);
 	}
 
 	game_config::add_color_info(game_config_view::wrap(get_scenario()));
@@ -324,7 +337,7 @@ bool mp_join_game::show_flg_select(int side_num, bool first_time)
 		// TODO: the host cannot yet handle this and always uses the first side owned by that player.
 		change["side_num"] = side_num;
 
-		network_connection_.send_data(faction);
+		mp::send_to_server(faction);
 	}
 
 	return true;
@@ -571,11 +584,11 @@ void mp_join_game::post_show(window& window)
 
 		mp::level_to_gamestate(level_, state_);
 
-		mp_ui_alerts::game_has_begun();
+		mp::ui_alerts::game_has_begun();
 	} else if(observe_game_) {
-		network_connection_.send_data(config("observer_quit", config { "name", preferences::login() }));
+		mp::send_to_server(config("observer_quit", config { "name", preferences::login() }));
 	} else {
-		network_connection_.send_data(config("leave_game"));
+		mp::send_to_server(config("leave_game"));
 	}
 }
 

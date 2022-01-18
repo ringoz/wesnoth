@@ -1,5 +1,5 @@
-# set minimum version
-cmake_minimum_required(VERSION 3.7)
+﻿# set minimum version
+cmake_minimum_required(VERSION 3.14)
 
 project(wesnoth)
 
@@ -79,19 +79,8 @@ find_package(Gettext)
 find_package(X11)
 
 if(NOT WIN32)
-	# needed to get some SDL2 defines in... (as of rev31694 -D_GNU_SOURCE=1 is required!)
-	if(NOT MINGW)
-		set(SDL2_CONFIG "sdl2-config" CACHE STRING "Path to sdl2-config script")
-		exec_program(${SDL2_CONFIG} ARGS "--cflags" OUTPUT_VARIABLE SDL2_CFLAGS)
-		add_definitions(${SDL2_CFLAGS})
-	else()
-		# equivalent to sdl2-config --cflags --libs
-		# since cmake cannot execute sdl2-config in msys2 shell
-		set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -I/mingw64/include/SDL2 -Dmain=SDL_main -L/mingw64/lib -lmingw32 -lSDL2main -lSDL2 -mwindows)
-	endif()
-
-		# Use the safer `mkstemp' instead of `tmpnam' on POSIX systems.
-		add_definitions(-DLUA_USE_POSIX)
+	# Use the safer `mkstemp' instead of `tmpnam' on POSIX systems.
+	add_definitions(-DLUA_USE_POSIX)
 endif()
 
 #check for some compiler/arch specific things and export defines accordingly...
@@ -170,7 +159,7 @@ set(BINARY_PREFIX "" CACHE STRING "Prefix in front of all binaries")
 
 ### Set the environment compiler flags.
 
-if(NOT WIN32)
+if(NOT MSVC)
 	if(NOT DEFINED CXX_FLAGS_USER)
 
 		MESSAGE(STATUS "Environment compiler flags set to »${CXX_FLAGS_USER}«")
@@ -260,6 +249,8 @@ if(NOT WIN32)
 
 		if(APPLE)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -Wl,-pie")
+		elseif(WIN32 AND MINGW)
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie")
 		else()
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie -Wl,-z,relro,-z,now")
 		endif()
@@ -432,7 +423,7 @@ else()
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG_LUA")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /MANIFEST:NO")
 	set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:MSVCRT")
-	
+
 # -DNDEBUG is automatically added to all release build types, so manually remove this define from the related variables
 	RemoveFlag(CMAKE_CXX_FLAGS_RELEASE CACHE "/DNDEBUG" "Default C++ flags for RELEASE")
 	RemoveFlag(CMAKE_C_FLAGS_RELEASE CACHE "/DNDEBUG" "Default C flags for RELEASE")
@@ -476,7 +467,6 @@ endif()
 #
 
 if(ENABLE_GAME OR ENABLE_TESTS)
-# TODO: SDL2::SDL2 etc component target available with cmake 3.19+
 	find_package(SDL2 2.0.8 REQUIRED)
 	find_package(SDL2_image 2.0.2 REQUIRED)
 	find_package(SDL2_mixer 2.0.0 REQUIRED)

@@ -46,7 +46,7 @@ public:
 	void update_gamelist();
 
 protected:
-	void update_gamelist_header();
+	void update_visible_games();
 
 	void update_gamelist_diff();
 
@@ -117,15 +117,9 @@ private:
 
 	void game_filter_init();
 
-	void game_filter_change_callback();
-
 	void game_filter_keypress_callback(const SDL_Keycode key);
 
-	void gamelist_change_callback();
-
-	void player_filter_callback();
-
-	void user_dialog_callback(mp::user_info* info);
+	void user_dialog_callback(const mp::user_info* info);
 
 	void skip_replay_changed_callback();
 

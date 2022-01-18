@@ -521,7 +521,8 @@ void game::transfer_side_control(player_iterator player, const simple_wml::node&
 	if(newplayer == old_player) {
 		// if the player is unchanged and the controller type (human or ai) is also unchanged then nothing to do
 		// else only need to change the controller type rather than the player who controls the side
-		if(CONTROLLER::string_to_enum(controller_type) == side_controllers_[side_num - 1]) {
+		// :droid provides a valid controller_type; :control provides nothing since it's only tranferring control between players regardless of type
+		if(controller_type == "" || CONTROLLER::string_to_enum(controller_type) == side_controllers_[side_num - 1]) {
 			std::stringstream msg;
 			msg << "Side " << side_num << " is already controlled by " << newplayer_name << ".";
 			send_server_message(msg.str(), player);
@@ -971,7 +972,7 @@ bool game::process_turn(simple_wml::document& data, player_iterator user)
 
 			std::stringstream msg;
 			msg << "Removing illegal command '" << (*command).first_child().to_string() << "' from: " << username(user)
-				<< ". Current player is: " << username(*current_player()) << " (" << current_side_index_ + 1 << "/" << nsides_
+				<< ". Current player is: " << (current_player() ? username(*current_player()) : "<none>") << " (" << current_side_index_ + 1 << "/" << nsides_
 				<< ").";
 			LOG_GAME << msg.str() << " (game id: " << id_ << ", " << db_id_ << ")\n";
 			send_and_record_server_message(msg.str());
@@ -1021,7 +1022,17 @@ bool game::process_turn(simple_wml::document& data, player_iterator user)
 
 				// figure out who gets the surrendered side
 				if(owner_ == user) {
-					playername = username(*sides_[(side_index + 1) % sides_.size()]);
+					auto new_side_index = (side_index + 1) % sides_.size();
+					auto new_owner = sides_[new_side_index];
+					while(!new_owner) {
+						new_side_index = (new_side_index + 1) % sides_.size();
+						if(new_side_index == side_index) {
+							ERR_GAME << "Ran out of sides to surrender to.\n";
+							return false;
+						}
+						new_owner = sides_[new_side_index];
+					}
+					playername = username(*new_owner);
 				} else {
 					playername = username(owner_);
 				}
