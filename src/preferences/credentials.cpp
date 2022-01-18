@@ -27,11 +27,6 @@
 
 #include <openssl/rc4.h>
 
-#ifdef _WIN32
-#include <boost/range/iterator_range.hpp>
-#include <windows.h>
-#endif
-
 static lg::log_domain log_config("config");
 #define DBG_CFG LOG_STREAM(debug , log_config)
 #define ERR_CFG LOG_STREAM(err , log_config)
@@ -78,19 +73,9 @@ static secure_buffer unescape(const secure_buffer& text);
 static std::string get_system_username()
 {
 	std::string res;
-#ifdef _WIN32
-	wchar_t buffer[300];
-	DWORD size = 300;
-	if(GetUserNameW(buffer, &size)) {
-		//size includes a terminating null character.
-		assert(size > 0);
-		res = unicode_cast<std::string>(boost::iterator_range<wchar_t*>(buffer, buffer + size - 1));
-	}
-#else
 	if(char* const login = getenv("USER")) {
 		res = login;
 	}
-#endif
 	return res;
 }
 
